@@ -26,9 +26,19 @@ xcodebuild build-for-testing \
   CODE_SIGNING_ALLOWED=NO
 ```
 
+Run the unit tests with:
+
+```bash
+xcodebuild test \
+  -project ForexFactoryMVP.xcodeproj \
+  -scheme ForexFactoryMVP \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  CODE_SIGNING_ALLOWED=NO
+```
+
 For a real iPhone, open the generated project in Xcode, select your free Apple development team,
 choose the paired device, and run. Enter the public HTTPS backend URL and `APP_API_KEY` in Settings.
 The Kimi API key remains only on the backend.
 
 See [API contract](docs/api-contract.md) for the network boundary and
-[implementation plan](docs/implementation-plan.md) for the remaining test-first work.
+[implementation plan](docs/implementation-plan.md) for the test-first implementation record.

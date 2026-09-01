@@ -18,6 +18,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: shop.zhenmei.ForexFactoryMVP
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        TARGETED_DEVICE_FAMILY: "1"
     dependencies:
       - sdk: Security.framework
   ForexFactoryMVPTests:
