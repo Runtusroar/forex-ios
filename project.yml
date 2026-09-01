@@ -17,6 +17,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: shop.zhenmei.ForexFactoryMVP
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 7GD7XPGQ4K
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIRequiresFullScreen: YES
