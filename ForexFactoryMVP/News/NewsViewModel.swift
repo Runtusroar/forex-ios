@@ -225,10 +225,6 @@ final class NewsViewModel {
         try await makeAPI().newsV2Detail(id: id)
     }
 
-    func sourceDocument(id: Int) async throws -> SourceDocument {
-        try await makeAPI().sourceDocument(id: id)
-    }
-
     func comments(id: String, cursor: String? = nil) async throws -> NewsCommentsEnvelope {
         try await makeAPI().articleComments(id: id, limit: 50, cursor: cursor)
     }

@@ -49,4 +49,34 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(segment.presentation.maxLines, 10)
         XCTAssertEqual(segment.presentation.actionLabel, "Show More")
     }
+
+    func testPresentationModelBuildsInlineLinkAndExternalAction() throws {
+        let json = #"{"id":4,"stable_key":"body-1","position":1,"type":"social","author_name":"Donald J. Trump","author_handle":"@realDonaldTrump","published_at":null,"published_at_source_text":null,"text":{"en":"Forex Factory excerpt...","zh_hans":"外汇工厂摘要……"},"source_url":"https://truthsocial.com/post/1","is_excerpt":true,"presentation":{"mode":"clamped","max_lines":10,"action_label":"Show More"},"media":[],"links":[{"id":11,"position":0,"kind":"full_story","label":"full story","url":"https://publisher.example/story"}]}"#
+        let segment = try JSONDecoder.api.decode(NewsSegment.self, from: Data(json.utf8))
+
+        let presentation = NewsSegmentPresentationModel(segment: segment)
+
+        XCTAssertEqual(
+            presentation.attributedEnglish.map { String($0.characters) },
+            "Forex Factory excerpt... (full story)"
+        )
+        let linkedLabels = presentation.attributedEnglish?.runs.compactMap { run in
+            run.link == nil ? nil : String(presentation.attributedEnglish![run.range].characters)
+        }
+        XCTAssertEqual(linkedLabels, ["full story"])
+        XCTAssertEqual(
+            presentation.attributedEnglish?.runs.compactMap(\.link),
+            [URL(string: "https://publisher.example/story")!]
+        )
+        XCTAssertEqual(presentation.lineLimit, 10)
+        XCTAssertEqual(presentation.externalAction?.label, "Show More")
+        XCTAssertEqual(
+            presentation.externalAction?.url,
+            URL(string: "https://truthsocial.com/post/1")
+        )
+        XCTAssertEqual(
+            presentation.primaryExternalURL,
+            URL(string: "https://publisher.example/story")
+        )
+    }
 }

@@ -47,13 +47,4 @@ final class APIClientTests: XCTestCase {
         }
     }
 
-    func testSourceDocumentRequestUsesProtectedVersionedPath() throws {
-        let request = try APIRequestBuilder(
-            baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),
-            apiKey: "secret"
-        ).sourceDocument(id: 7)
-
-        XCTAssertEqual(request.url?.path, "/api/v2/news/source-documents/7")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
-    }
 }

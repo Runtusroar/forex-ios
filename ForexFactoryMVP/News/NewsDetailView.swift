@@ -27,10 +27,10 @@ struct NewsDetailView: View {
                     Link("Open original on Forex Factory", destination: detail.ffURL)
                         .font(.footnote.weight(.semibold))
                 }
-                if isLoading { ProgressView("Loading full story…") }
+                if isLoading { ProgressView("Loading Forex Factory detail…") }
                 if let errorMessage {
                     ContentUnavailableView {
-                        Label("Unable to load full story", systemImage: "wifi.exclamationmark")
+                        Label("Unable to load detail", systemImage: "wifi.exclamationmark")
                     } description: {
                         Text(errorMessage)
                     } actions: {
