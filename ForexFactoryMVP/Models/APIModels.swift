@@ -208,6 +208,40 @@ enum NewsSegmentLinkKind: String, Codable, Sendable {
     }
 }
 
+enum NewsSegmentDisplayMode: String, Codable, Sendable {
+    case full
+    case clamped
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = NewsSegmentDisplayMode(rawValue: value) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+struct NewsSegmentPresentation: Codable, Equatable, Sendable {
+    let mode: NewsSegmentDisplayMode
+    let maxLines: Int?
+    let actionLabel: String?
+
+    static let full = NewsSegmentPresentation(
+        mode: .full,
+        maxLines: nil,
+        actionLabel: nil
+    )
+
+    enum CodingKeys: String, CodingKey {
+        case mode
+        case maxLines = "max_lines"
+        case actionLabel = "action_label"
+    }
+}
+
 enum SourceDocumentState: String, Codable, Sendable {
     case pending
     case processing
@@ -303,9 +337,10 @@ struct NewsSegment: Codable, Identifiable, Equatable, Sendable {
     let isExcerpt: Bool
     let media: [NewsMedia]
     let links: [NewsSegmentLink]
+    let presentation: NewsSegmentPresentation
 
     enum CodingKeys: String, CodingKey {
-        case id, position, type, text, media, links
+        case id, position, type, text, media, links, presentation
         case stableKey = "stable_key"
         case authorName = "author_name"
         case authorHandle = "author_handle"
@@ -332,6 +367,10 @@ struct NewsSegment: Codable, Identifiable, Equatable, Sendable {
         isExcerpt = try container.decode(Bool.self, forKey: .isExcerpt)
         media = try container.decode([NewsMedia].self, forKey: .media)
         links = try container.decodeIfPresent([NewsSegmentLink].self, forKey: .links) ?? []
+        presentation = try container.decodeIfPresent(
+            NewsSegmentPresentation.self,
+            forKey: .presentation
+        ) ?? .full
     }
 }
 

@@ -35,37 +35,18 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(item.breakingImpact, .unknown)
     }
 
-    func testNewsSegmentDecodesStructuredFullStoryLinkAndSourceDocument() throws {
-        let json = #"{"id":4,"stable_key":"body-1","position":1,"type":"article","author_name":null,"author_handle":null,"published_at":null,"published_at_source_text":null,"text":{"en":"Forex Factory excerpt","zh_hans":"外汇工厂摘要"},"source_url":"https://publisher.example/story","is_excerpt":true,"media":[],"links":[{"id":11,"position":0,"kind":"full_story","label":"full story","url":"https://publisher.example/story","source_document":{"id":7,"state":"complete","title":{"en":"Publisher headline","zh_hans":"出版方标题"},"author_name":"News Desk","source_host":"publisher.example","published_at_source_text":"Sep 3, 2026","lead_image_url":"https://publisher.example/lead.jpg","has_native_content":true}}]}"#
+    func testNewsSegmentDecodesFaithfulTextLinkAndPresentation() throws {
+        let json = #"{"id":4,"stable_key":"body-1","position":1,"type":"article","author_name":null,"author_handle":null,"published_at":null,"published_at_source_text":null,"text":{"en":"Forex Factory excerpt...","zh_hans":"外汇工厂摘要……"},"source_url":"https://publisher.example/story","is_excerpt":true,"presentation":{"mode":"clamped","max_lines":10,"action_label":"Show More"},"media":[],"links":[{"id":11,"position":0,"kind":"full_story","label":"full story","url":"https://publisher.example/story"}]}"#
 
         let segment = try JSONDecoder.api.decode(NewsSegment.self, from: Data(json.utf8))
 
-        XCTAssertEqual(segment.text.en, "Forex Factory excerpt")
+        XCTAssertEqual(segment.text.en, "Forex Factory excerpt...")
         XCTAssertEqual(segment.links.count, 1)
         XCTAssertEqual(segment.links[0].kind, .fullStory)
-        XCTAssertEqual(segment.links[0].sourceDocument?.state, .complete)
-        XCTAssertEqual(segment.links[0].sourceDocument?.title.zhHans, "出版方标题")
-        XCTAssertTrue(segment.links[0].sourceDocument?.hasNativeContent == true)
-    }
-
-    func testSourceDocumentDecodesBilingualNativeArticle() throws {
-        let json = #"{"id":7,"state":"complete","original_url":"https://publisher.example/story","final_url":"https://publisher.example/story?canonical=1","source_host":"publisher.example","title":{"en":"Publisher headline","zh_hans":"出版方标题"},"author_name":"News Desk","published_at_source_text":"Sep 3, 2026","lead_image_url":"https://publisher.example/lead.jpg","body":{"en":"First paragraph.\n\nSecond paragraph.","zh_hans":"第一段。\n\n第二段。"},"paragraphs":["First paragraph.","Second paragraph."],"extraction_method":"json_ld","last_fetched_at":"2026-09-03T01:02:00Z"}"#
-
-        let document = try JSONDecoder.api.decode(SourceDocument.self, from: Data(json.utf8))
-
-        XCTAssertEqual(document.state, .complete)
-        XCTAssertEqual(document.paragraphs, ["First paragraph.", "Second paragraph."])
-        XCTAssertEqual(document.body.zhHans, "第一段。\n\n第二段。")
-        XCTAssertEqual(document.extractionMethod, "json_ld")
-    }
-
-    func testBlockedSourceDocumentKeepsOriginalPublisherURL() throws {
-        let json = #"{"id":8,"state":"blocked","original_url":"https://publisher.example/blocked","final_url":null,"source_host":"publisher.example","title":{"en":null,"zh_hans":null},"author_name":null,"published_at_source_text":null,"lead_image_url":null,"body":{"en":null,"zh_hans":null},"paragraphs":[],"extraction_method":null,"last_fetched_at":null}"#
-
-        let document = try JSONDecoder.api.decode(SourceDocument.self, from: Data(json.utf8))
-
-        XCTAssertEqual(document.state, .blocked)
-        XCTAssertEqual(document.originalURL.absoluteString, "https://publisher.example/blocked")
-        XCTAssertNil(document.body.en)
+        XCTAssertEqual(segment.links[0].label, "full story")
+        XCTAssertEqual(segment.links[0].url.absoluteString, "https://publisher.example/story")
+        XCTAssertEqual(segment.presentation.mode, .clamped)
+        XCTAssertEqual(segment.presentation.maxLines, 10)
+        XCTAssertEqual(segment.presentation.actionLabel, "Show More")
     }
 }
