@@ -1,6 +1,6 @@
 import Foundation
 
-enum Impact: String, Codable, Sendable {
+enum Impact: String, Codable, Hashable, Sendable {
     case low
     case medium
     case high
@@ -28,7 +28,7 @@ struct LocalizedText: Codable, Equatable, Sendable {
     }
 }
 
-enum NewsSectionID: String, Codable, CaseIterable, Identifiable, Sendable {
+enum NewsSectionID: String, Codable, CaseIterable, Hashable, Identifiable, Sendable {
     case latest
     case hot
     case fundamental
