@@ -68,7 +68,7 @@
 - Produces: verified simulator and signed iPhone builds.
 
 - [x] Update documentation for provenance and fallback behavior.
-- [ ] Run the full simulator suite and generic build with zero failures/warnings.
-- [ ] Validate live detail and source-document decoding against `https://api.juezhou.cc` without logging the key.
-- [ ] Build/sign, install, and launch on device `B3155DEA-0774-5E49-8C4D-3A641C955EDD`.
-- [ ] Push `codex/news-v2-client` and confirm local/remote synchronization.
+- [x] Run the full simulator suite and signed device build with zero failures.
+- [x] Validate live detail and source-document decoding against `https://api.juezhou.cc` without logging the key.
+- [x] Build/sign, install, and launch on device `B3155DEA-0774-5E49-8C4D-3A641C955EDD`.
+- [x] Push `codex/news-v2-client` and confirm local/remote synchronization.
