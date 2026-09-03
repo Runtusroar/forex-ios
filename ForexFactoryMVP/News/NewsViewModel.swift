@@ -62,7 +62,7 @@ final class NewsViewModel {
             items = Self.sorted(envelope.items)
             staleSince = nil
             errorMessage = nil
-            try await cache.save(envelope, as: .news)
+            try await cache.save(envelope, as: .newsLegacy)
         } catch {
             errorMessage = items.isEmpty
                 ? readableMessage(for: error)
@@ -75,7 +75,7 @@ final class NewsViewModel {
     }
 
     func loadCachedData() async {
-        guard let envelope = try? await cache.load(.news, as: NewsEnvelope.self) else {
+        guard let envelope = try? await cache.load(.newsLegacy, as: NewsEnvelope.self) else {
             return
         }
         items = Self.sorted(envelope.items)

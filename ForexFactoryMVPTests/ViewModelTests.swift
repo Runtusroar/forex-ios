@@ -68,7 +68,7 @@ final class ViewModelTests: XCTestCase {
         let model = NewsViewModel(api: api, cache: cache)
 
         await model.refresh()
-        let cached = try await cache.load(.news, as: NewsEnvelope.self)
+        let cached = try await cache.load(.newsLegacy, as: NewsEnvelope.self)
 
         XCTAssertEqual(model.items.map(\.sourceID), ["new", "old"])
         XCTAssertEqual(cached?.items.count, 2)

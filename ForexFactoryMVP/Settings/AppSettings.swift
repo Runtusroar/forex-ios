@@ -70,6 +70,11 @@ struct APICredentials: Equatable, Sendable {
 @MainActor
 final class AppSettings {
     private static let baseURLKey = "api.baseURL"
+    private static let currentDefaultBaseURL = "https://api.juezhou.cc"
+    private static let legacyDefaultBaseURLs = Set([
+        "https://zhenmei.shop",
+        "https://zhenmei.shop/",
+    ])
     private let defaults: UserDefaults
     private let keyStore: any APIKeyStoring
 
@@ -80,7 +85,14 @@ final class AppSettings {
     init(defaults: UserDefaults = .standard, keyStore: any APIKeyStoring = KeychainAPIKeyStore()) {
         self.defaults = defaults
         self.keyStore = keyStore
-        baseURLText = defaults.string(forKey: Self.baseURLKey) ?? "https://zhenmei.shop"
+        if let storedURL = defaults.string(forKey: Self.baseURLKey),
+           !Self.legacyDefaultBaseURLs.contains(storedURL)
+        {
+            baseURLText = storedURL
+        } else {
+            baseURLText = Self.currentDefaultBaseURL
+            defaults.set(Self.currentDefaultBaseURL, forKey: Self.baseURLKey)
+        }
     }
 
     var hasStoredAPIKey: Bool {
