@@ -58,4 +58,14 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(document.body.zhHans, "第一段。\n\n第二段。")
         XCTAssertEqual(document.extractionMethod, "json_ld")
     }
+
+    func testBlockedSourceDocumentKeepsOriginalPublisherURL() throws {
+        let json = #"{"id":8,"state":"blocked","original_url":"https://publisher.example/blocked","final_url":null,"source_host":"publisher.example","title":{"en":null,"zh_hans":null},"author_name":null,"published_at_source_text":null,"lead_image_url":null,"body":{"en":null,"zh_hans":null},"paragraphs":[],"extraction_method":null,"last_fetched_at":null}"#
+
+        let document = try JSONDecoder.api.decode(SourceDocument.self, from: Data(json.utf8))
+
+        XCTAssertEqual(document.state, .blocked)
+        XCTAssertEqual(document.originalURL.absoluteString, "https://publisher.example/blocked")
+        XCTAssertNil(document.body.en)
+    }
 }

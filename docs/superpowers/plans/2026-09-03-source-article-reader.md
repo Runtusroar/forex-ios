@@ -31,11 +31,11 @@
 **Interfaces:**
 - Produces: `NewsSegmentLink`, `SourceDocumentSummary`, `SourceDocument`, and `sourceDocument(id:)`.
 
-- [ ] Add decoding tests for complete and blocked source documents and segment links.
-- [ ] Add request tests proving only backend source-document requests receive `X-API-Key`.
-- [ ] Run focused tests and confirm failure before implementation.
-- [ ] Implement models and authenticated backend request.
-- [ ] Run focused tests and commit `feat: add source-document transport`.
+- [x] Add decoding tests for complete and blocked source documents and segment links.
+- [x] Add request tests proving only backend source-document requests receive `X-API-Key`.
+- [x] Run focused tests and confirm failure before implementation.
+- [x] Implement models and authenticated backend request.
+- [x] Run focused tests and commit `feat: add source-document transport`.
 
 ### Task 2: Correct Detail and Reader UI
 
@@ -51,12 +51,12 @@
 - Consumes: `sourceDocument(id:)` and segment link summaries.
 - Produces: a non-duplicated Forex Factory detail and full-story navigation.
 
-- [ ] Add a failing view-model test for complete and blocked source-document loading.
-- [ ] Stop rendering teaser after detail segments load; retain it only as loading context.
-- [ ] Render one `Read full story` action per structured full-story link.
-- [ ] Show native English-first/Chinese-below paragraphs for complete documents.
-- [ ] Open publisher URL with `SFSafariViewController` for unavailable native content.
-- [ ] Run focused and full tests, regenerate the project, and commit `feat: read complete source stories`.
+- [x] Add a failing view-model test for complete and blocked source-document loading.
+- [x] Stop rendering teaser after detail segments load; retain it only as loading context.
+- [x] Render one `Read full story` action per structured full-story link.
+- [x] Show native English-first/Chinese-below paragraphs for complete documents.
+- [x] Open publisher URL with `SFSafariViewController` for unavailable native content.
+- [x] Run focused and full tests, regenerate the project, and commit `feat: read complete source stories`.
 
 ### Task 3: Final Verification and iPhone Installation
 
@@ -67,7 +67,7 @@
 **Interfaces:**
 - Produces: verified simulator and signed iPhone builds.
 
-- [ ] Update documentation for provenance and fallback behavior.
+- [x] Update documentation for provenance and fallback behavior.
 - [ ] Run the full simulator suite and generic build with zero failures/warnings.
 - [ ] Validate live detail and source-document decoding against `https://api.juezhou.cc` without logging the key.
 - [ ] Build/sign, install, and launch on device `B3155DEA-0774-5E49-8C4D-3A641C955EDD`.
