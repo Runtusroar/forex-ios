@@ -10,8 +10,8 @@ economic calendar and news with English as the primary text and optional Simplif
 - all eight Forex Factory news feeds: Latest, Hot, Fundamental, Technical, Industry,
   Entertainment, Educational, and Latest Comments
 - English-first cards and story segments with optional Simplified Chinese directly underneath
-- structured `full story` links with a native bilingual publisher-article reader
-- in-app Safari fallback when a publisher blocks extraction or a saved copy is not ready
+- Forex Factory excerpts with their original terminal ellipsis and inline `(full story)` link
+- Forex Factory-style social post clamping with external `Show More` actions
 - impact filtering, opaque-cursor pagination, article comments, and authenticated cached media
 - foreground refresh approximately every 30 seconds
 - pull-to-refresh
@@ -51,9 +51,10 @@ choose the paired device, and run. The default backend is `https://api.juezhou.c
 `APP_API_KEY` once in Settings. The key is stored in the iPhone Keychain. The Kimi API key remains
 only on the backend.
 
-Forex Factory excerpts and publisher copies remain separate records. The detail screen shows the
-Forex Factory text once, then presents `Read full story` as an action. Publisher URLs are opened
-directly by Safari and never receive the backend API key.
+The app displays only information collected from Forex Factory. It does not request or display a
+saved publisher article. The detail screen shows the Forex Factory text once, retains its visible
+ellipsis, and presents `full story` inline at the end of the English paragraph. Full-story and
+social-source URLs open in in-app Safari and never receive the backend API key.
 
 See [API contract](docs/api-contract.md) for the network boundary and
 [implementation plan](docs/implementation-plan.md) for the test-first implementation record.

@@ -16,7 +16,6 @@ The app communicates with `https://api.juezhou.cc` over HTTPS. Every endpoint be
 - `GET /api/v2/news/comments/latest?limit=50&cursor=<optional>`
 - `GET /api/v2/news/{source_id}/comments?limit=50&cursor=<optional>`
 - `GET /api/v2/news/media/{media_id}`
-- `GET /api/v2/news/source-documents/{document_id}`
 
 The eight section IDs are `latest`, `hot`, `fundamental`, `technical`, `industry`,
 `entertainment`, `educational`, and `latest-comments`. Cursor strings are opaque: the client returns
@@ -25,16 +24,16 @@ the server's `next_cursor` unchanged and stops when it is null.
 Article summaries contain feed metadata and optional thumbnails. Article details add ordered feed
 placements and ordered content segments. Segments may represent articles, social posts, updates,
 quotes, or links, and may contain cached images/charts. A segment's ordered `links` array preserves
-the semantic `full_story` anchor and includes source-document state. The source-document endpoint
-returns the publisher URL, provenance, extracted title/body/paragraphs, and nullable translations.
-The client retrieves only backend-relative
+the semantic `full_story` anchor as a label and external URL. Its `presentation` object identifies
+normal content or Forex Factory-clamped content with an optional line count and action label. The
+client retrieves only backend-relative
 `/api/v2/news/media/...` paths with authentication; public thumbnails are fetched without the API
 key.
 
-Forex Factory segment text is never merged with publisher text. A complete source document is
-rendered natively; `pending`, `processing`, `blocked`, and `failed` documents retain their original
-publisher URL for an `SFSafariViewController` fallback. Publisher requests do not use `APIClient`
-and therefore cannot inherit `X-API-Key`.
+Forex Factory segment text is never merged with publisher text. The app reconstructs the inline
+`(full story)` action after the exact Forex Factory English excerpt and opens the stored URL with
+`SFSafariViewController`. Long social content uses the server-provided clamp and `Show More`
+action. Publisher requests do not use `APIClient` and therefore cannot inherit `X-API-Key`.
 
 Localized fields have this shape:
 
