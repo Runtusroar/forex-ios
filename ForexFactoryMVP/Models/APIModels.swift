@@ -193,6 +193,102 @@ struct NewsMedia: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+enum NewsSegmentLinkKind: String, Codable, Sendable {
+    case fullStory = "full_story"
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = NewsSegmentLinkKind(rawValue: value) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+enum SourceDocumentState: String, Codable, Sendable {
+    case pending
+    case processing
+    case complete
+    case blocked
+    case failed
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = SourceDocumentState(rawValue: value) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+struct SourceDocumentSummary: Codable, Identifiable, Equatable, Sendable {
+    let id: Int
+    let state: SourceDocumentState
+    let title: LocalizedText
+    let authorName: String?
+    let sourceHost: String?
+    let publishedAtSourceText: String?
+    let leadImageURL: URL?
+    let hasNativeContent: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, state, title
+        case authorName = "author_name"
+        case sourceHost = "source_host"
+        case publishedAtSourceText = "published_at_source_text"
+        case leadImageURL = "lead_image_url"
+        case hasNativeContent = "has_native_content"
+    }
+}
+
+struct NewsSegmentLink: Codable, Identifiable, Equatable, Sendable {
+    let id: Int
+    let position: Int
+    let kind: NewsSegmentLinkKind
+    let label: String
+    let url: URL
+    let sourceDocument: SourceDocumentSummary?
+
+    enum CodingKeys: String, CodingKey {
+        case id, position, kind, label, url
+        case sourceDocument = "source_document"
+    }
+}
+
+struct SourceDocument: Codable, Identifiable, Equatable, Sendable {
+    let id: Int
+    let state: SourceDocumentState
+    let originalURL: URL
+    let finalURL: URL?
+    let sourceHost: String?
+    let title: LocalizedText
+    let authorName: String?
+    let publishedAtSourceText: String?
+    let leadImageURL: URL?
+    let body: LocalizedText
+    let paragraphs: [String]
+    let extractionMethod: String?
+    let lastFetchedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, state, title, body, paragraphs
+        case originalURL = "original_url"
+        case finalURL = "final_url"
+        case sourceHost = "source_host"
+        case authorName = "author_name"
+        case publishedAtSourceText = "published_at_source_text"
+        case leadImageURL = "lead_image_url"
+        case extractionMethod = "extraction_method"
+        case lastFetchedAt = "last_fetched_at"
+    }
+}
+
 struct NewsSegment: Codable, Identifiable, Equatable, Sendable {
     let id: Int
     let stableKey: String
@@ -206,9 +302,10 @@ struct NewsSegment: Codable, Identifiable, Equatable, Sendable {
     let sourceURL: URL?
     let isExcerpt: Bool
     let media: [NewsMedia]
+    let links: [NewsSegmentLink]
 
     enum CodingKeys: String, CodingKey {
-        case id, position, type, text, media
+        case id, position, type, text, media, links
         case stableKey = "stable_key"
         case authorName = "author_name"
         case authorHandle = "author_handle"
@@ -216,6 +313,25 @@ struct NewsSegment: Codable, Identifiable, Equatable, Sendable {
         case publishedAtSourceText = "published_at_source_text"
         case sourceURL = "source_url"
         case isExcerpt = "is_excerpt"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        stableKey = try container.decode(String.self, forKey: .stableKey)
+        position = try container.decode(Int.self, forKey: .position)
+        type = try container.decode(NewsSegmentType.self, forKey: .type)
+        authorName = try container.decodeIfPresent(String.self, forKey: .authorName)
+        authorHandle = try container.decodeIfPresent(String.self, forKey: .authorHandle)
+        publishedAt = try container.decodeIfPresent(Date.self, forKey: .publishedAt)
+        publishedAtSourceText = try container.decodeIfPresent(
+            String.self, forKey: .publishedAtSourceText
+        )
+        text = try container.decode(LocalizedText.self, forKey: .text)
+        sourceURL = try container.decodeIfPresent(URL.self, forKey: .sourceURL)
+        isExcerpt = try container.decode(Bool.self, forKey: .isExcerpt)
+        media = try container.decode([NewsMedia].self, forKey: .media)
+        links = try container.decodeIfPresent([NewsSegmentLink].self, forKey: .links) ?? []
     }
 }
 

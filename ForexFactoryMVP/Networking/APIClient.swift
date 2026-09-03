@@ -10,6 +10,7 @@ protocol ForexAPI: Sendable {
         cursor: String?
     ) async throws -> NewsArticlesEnvelope
     func newsV2Detail(id: String) async throws -> NewsArticleDetail
+    func sourceDocument(id: Int) async throws -> SourceDocument
     func latestComments(limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope
     func articleComments(id: String, limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope
     func mediaData(path: String) async throws -> Data
@@ -29,6 +30,10 @@ extension ForexAPI {
     }
 
     func newsV2Detail(id: String) async throws -> NewsArticleDetail {
+        throw APIError.invalidConfiguration
+    }
+
+    func sourceDocument(id: Int) async throws -> SourceDocument {
         throw APIError.invalidConfiguration
     }
 
@@ -106,6 +111,11 @@ struct APIRequestBuilder: Sendable {
 
     func newsV2Detail(id: String) throws -> URLRequest {
         try request(path: "/api/v2/news/\(id)")
+    }
+
+    func sourceDocument(id: Int) throws -> URLRequest {
+        guard id > 0 else { throw APIError.invalidConfiguration }
+        return try request(path: "/api/v2/news/source-documents/\(id)")
     }
 
     func latestComments(limit: Int, cursor: String?) throws -> URLRequest {
@@ -192,6 +202,10 @@ actor APIClient: ForexAPI {
 
     func newsV2Detail(id: String) async throws -> NewsArticleDetail {
         try await send(builder.newsV2Detail(id: id))
+    }
+
+    func sourceDocument(id: Int) async throws -> SourceDocument {
+        try await send(builder.sourceDocument(id: id))
     }
 
     func latestComments(limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope {
