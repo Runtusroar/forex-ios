@@ -10,4 +10,28 @@ final class APIModelsTests: XCTestCase {
         XCTAssertNil(event.titleZH)
         XCTAssertEqual(event.impact, .high)
     }
+
+    func testNewsV2DetailDecodesOrderedBilingualSegmentsAndMedia() throws {
+        let json = #"{"source_id":"1416171","ff_url":"https://www.forexfactory.com/news/1416171-yen-rises","title":{"en":"Yen rises","zh_hans":"日元上涨"},"teaser":{"en":"BOJ watched markets.","zh_hans":null},"source_name":"Reuters","source_url":"https://reuters.example/story","published_at":"2026-09-03T01:00:00Z","published_at_source_text":"Sep 3, 2026 9:00am","source_timezone":"Asia/Shanghai","breaking_impact":"high","comment_count":12,"detail_state":"complete","is_excerpt":true,"thumbnail_url":"https://assets.example/thumb.png","categories":["fundamental"],"feeds":[{"feed_type":"latest","rank":0}],"segments":[{"id":3,"stable_key":"social-1","position":0,"type":"social","author_name":"Market Wire","author_handle":"@wire","published_at":"2026-09-03T01:01:00Z","published_at_source_text":"Sep 3, 2026 9:01am","text":{"en":"First alert","zh_hans":"第一条快讯"},"source_url":"https://x.com/wire/1","is_excerpt":false,"media":[]},{"id":4,"stable_key":"body-1","position":1,"type":"article","author_name":null,"author_handle":null,"published_at":null,"published_at_source_text":null,"text":{"en":"Full story","zh_hans":null},"source_url":"https://reuters.example/story","is_excerpt":true,"media":[{"id":7,"position":0,"type":"image","caption":null,"original_url":"https://assets.example/image.png","download_state":"complete","url":"/api/v2/news/media/7","mime_type":"image/png","byte_size":18151}]}],"comment_count_collected":4,"comments_complete":false,"generated_at":"2026-09-03T01:02:00Z"}"#
+
+        let detail = try JSONDecoder.api.decode(NewsArticleDetail.self, from: Data(json.utf8))
+
+        XCTAssertEqual(detail.sourceID, "1416171")
+        XCTAssertEqual(detail.title.en, "Yen rises")
+        XCTAssertEqual(detail.title.zhHans, "日元上涨")
+        XCTAssertNil(detail.teaser.zhHans)
+        XCTAssertEqual(detail.breakingImpact, .high)
+        XCTAssertEqual(detail.segments.map(\.position), [0, 1])
+        XCTAssertEqual(detail.segments[0].type, .social)
+        XCTAssertEqual(detail.segments[1].media[0].url, "/api/v2/news/media/7")
+        XCTAssertFalse(detail.commentsComplete)
+    }
+
+    func testUnknownImpactDecodesWithoutDiscardingArticle() throws {
+        let json = #"{"source_id":"1","ff_url":"https://www.forexfactory.com/news/1","title":{"en":"Title","zh_hans":null},"teaser":{"en":null,"zh_hans":null},"source_name":null,"source_url":null,"published_at":null,"published_at_source_text":"now","source_timezone":null,"breaking_impact":"future-value","comment_count":0,"detail_state":"pending","is_excerpt":false,"thumbnail_url":null,"categories":[]}"#
+
+        let item = try JSONDecoder.api.decode(NewsArticleSummary.self, from: Data(json.utf8))
+
+        XCTAssertEqual(item.breakingImpact, .unknown)
+    }
 }
