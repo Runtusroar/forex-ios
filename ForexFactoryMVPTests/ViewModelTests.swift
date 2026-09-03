@@ -46,12 +46,6 @@ private actor StubForexAPI: ForexAPI {
         return calendarEnvelope
     }
 
-    func news(limit: Int) async throws -> NewsEnvelope {
-        NewsEnvelope(items: [], generatedAt: Date(timeIntervalSince1970: 1))
-    }
-
-    func newsDetail(id: String) async throws -> NewsItem { throw APIError.notFound }
-
     func newsSections() async throws -> NewsSectionsEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
         return NewsSectionsEnvelope(items: sampleSections(), generatedAt: Date(timeIntervalSince1970: 300))

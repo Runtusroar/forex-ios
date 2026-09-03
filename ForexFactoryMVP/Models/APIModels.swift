@@ -352,39 +352,6 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-struct NewsItem: Codable, Identifiable, Equatable, Sendable {
-    let sourceID: String
-    let url: URL
-    let source: String?
-    let publishedAt: Date?
-    let firstSeenAt: Date
-    let titleEN: String
-    let titleZH: String?
-    let summaryEN: String?
-    let summaryZH: String?
-    let bodyEN: String?
-    let bodyZH: String?
-    let imageURL: URL?
-    let updatedAt: Date
-
-    var id: String { sourceID }
-
-    enum CodingKeys: String, CodingKey {
-        case sourceID = "source_id"
-        case url, source
-        case publishedAt = "published_at"
-        case firstSeenAt = "first_seen_at"
-        case titleEN = "title_en"
-        case titleZH = "title_zh"
-        case summaryEN = "summary_en"
-        case summaryZH = "summary_zh"
-        case bodyEN = "body_en"
-        case bodyZH = "body_zh"
-        case imageURL = "image_url"
-        case updatedAt = "updated_at"
-    }
-}
-
 struct ListEnvelope<Item: Codable & Sendable>: Codable, Sendable {
     let items: [Item]
     let generatedAt: Date
@@ -396,7 +363,6 @@ struct ListEnvelope<Item: Codable & Sendable>: Codable, Sendable {
 }
 
 typealias CalendarEnvelope = ListEnvelope<CalendarEvent>
-typealias NewsEnvelope = ListEnvelope<NewsItem>
 
 struct ServiceStatus: Codable, Equatable, Sendable {
     let status: String

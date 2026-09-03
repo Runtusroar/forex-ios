@@ -54,9 +54,6 @@ final class NewsViewModel {
         return articleStates[currentKey]?.nextCursor != nil
     }
 
-    // Kept until the legacy list view is replaced by the News V2 UI.
-    var items: [NewsItem] = []
-
     init(
         api: any ForexAPI,
         cache: ResponseCache,
@@ -234,11 +231,6 @@ final class NewsViewModel {
 
     func mediaData(path: String) async throws -> Data {
         try await makeAPI().mediaData(path: path)
-    }
-
-    // Kept until the legacy detail view is replaced by the News V2 UI.
-    func detail(id: String) async throws -> NewsItem {
-        try await makeAPI().newsDetail(id: id)
     }
 
     func loadCachedData() async {

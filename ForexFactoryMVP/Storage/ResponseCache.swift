@@ -2,15 +2,12 @@ import Foundation
 
 enum CacheKey: Sendable {
     case calendar
-    case newsLegacy
     case news(section: NewsSectionID, impact: Impact?)
 
     var fileName: String {
         switch self {
         case .calendar:
             "calendar-v1.json"
-        case .newsLegacy:
-            "news-v1.json"
         case let .news(section, impact):
             "news-v2-\(section.rawValue)-\(impact?.rawValue ?? "all").json"
         }

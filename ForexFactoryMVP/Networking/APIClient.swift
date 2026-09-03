@@ -2,8 +2,6 @@ import Foundation
 
 protocol ForexAPI: Sendable {
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope
-    func news(limit: Int) async throws -> NewsEnvelope
-    func newsDetail(id: String) async throws -> NewsItem
     func newsSections() async throws -> NewsSectionsEnvelope
     func news(
         section: NewsSectionID,
@@ -83,13 +81,6 @@ struct APIRequestBuilder: Sendable {
         )
     }
 
-    func news(limit: Int) throws -> URLRequest {
-        try request(
-            path: "/api/v1/news",
-            queryItems: [URLQueryItem(name: "limit", value: String(limit))]
-        )
-    }
-
     func newsSections() throws -> URLRequest {
         try request(path: "/api/v2/news/sections")
     }
@@ -111,10 +102,6 @@ struct APIRequestBuilder: Sendable {
             queryItems.append(URLQueryItem(name: "cursor", value: cursor))
         }
         return try request(path: "/api/v2/news", queryItems: queryItems)
-    }
-
-    func newsDetail(id: String) throws -> URLRequest {
-        try request(path: "/api/v1/news/\(id)")
     }
 
     func newsV2Detail(id: String) throws -> URLRequest {
@@ -186,14 +173,6 @@ actor APIClient: ForexAPI {
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
         try await send(builder.calendar(from: start, to: end))
-    }
-
-    func news(limit: Int = 50) async throws -> NewsEnvelope {
-        try await send(builder.news(limit: limit))
-    }
-
-    func newsDetail(id: String) async throws -> NewsItem {
-        try await send(builder.newsDetail(id: id))
     }
 
     func newsSections() async throws -> NewsSectionsEnvelope {
