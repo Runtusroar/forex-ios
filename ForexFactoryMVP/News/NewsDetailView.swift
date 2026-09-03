@@ -59,11 +59,13 @@ struct NewsDetailView: View {
             chinese: title?.zhHans,
             englishFont: .title2.bold()
         )
-        if let english = teaser?.en, !english.isEmpty {
-            Text(english).font(.subheadline).foregroundStyle(.secondary)
-        }
-        if let chinese = teaser?.zhHans, !chinese.isEmpty {
-            Text(chinese).font(.footnote).foregroundStyle(.tertiary)
+        if detail == nil || detail?.segments.isEmpty == true {
+            if let english = teaser?.en, !english.isEmpty {
+                Text(english).font(.subheadline).foregroundStyle(.secondary)
+            }
+            if let chinese = teaser?.zhHans, !chinese.isEmpty {
+                Text(chinese).font(.footnote).foregroundStyle(.tertiary)
+            }
         }
     }
 

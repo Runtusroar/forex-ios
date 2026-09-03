@@ -14,6 +14,8 @@ private actor StubForexAPI: ForexAPI {
     private var commentsEnvelope = NewsCommentsEnvelope(
         items: [], nextCursor: nil, commentsComplete: false, generatedAt: Date(timeIntervalSince1970: 1)
     )
+    private var sourceDocuments: [Int: SourceDocument] = [:]
+    private(set) var sourceDocumentCalls: [Int] = []
     private(set) var articleCalls: [ArticleCall] = []
     private(set) var latestCommentCalls = 0
     private var shouldFail = false
@@ -37,9 +39,15 @@ private actor StubForexAPI: ForexAPI {
         commentsEnvelope = envelope
     }
 
+    func setSourceDocument(_ document: SourceDocument) {
+        sourceDocuments[document.id] = document
+    }
+
     func calls() -> [ArticleCall] { articleCalls }
 
     func latestCommentCallCount() -> Int { latestCommentCalls }
+
+    func requestedSourceDocumentIDs() -> [Int] { sourceDocumentCalls }
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
@@ -66,6 +74,12 @@ private actor StubForexAPI: ForexAPI {
     }
 
     func newsV2Detail(id: String) async throws -> NewsArticleDetail { throw APIError.notFound }
+
+    func sourceDocument(id: Int) async throws -> SourceDocument {
+        sourceDocumentCalls.append(id)
+        guard let document = sourceDocuments[id] else { throw APIError.notFound }
+        return document
+    }
 
     func latestComments(limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
@@ -213,6 +227,20 @@ final class ViewModelTests: XCTestCase {
         XCTAssertEqual(model.currentArticles.map(\.sourceID), ["saved"])
         XCTAssertEqual(model.errorMessage, "Unable to refresh. Showing saved data.")
     }
+
+    @MainActor
+    func testNewsModelLoadsPublisherDocumentByID() async throws {
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
+        let document = sampleSourceDocument()
+        await api.setSourceDocument(document)
+        let model = NewsViewModel(api: api, cache: ResponseCache(directory: temporaryDirectory()))
+
+        let loaded = try await model.sourceDocument(id: document.id)
+
+        XCTAssertEqual(loaded, document)
+        let calls = await api.requestedSourceDocumentIDs()
+        XCTAssertEqual(calls, [document.id])
+    }
 }
 
 private func temporaryDirectory() -> URL {
@@ -282,4 +310,22 @@ private func sampleSections() -> [NewsSection] {
             supportsImpactFilter: $0 != .latestComments
         )
     }
+}
+
+private func sampleSourceDocument() -> SourceDocument {
+    SourceDocument(
+        id: 7,
+        state: .complete,
+        originalURL: URL(string: "https://publisher.example/story")!,
+        finalURL: URL(string: "https://publisher.example/story")!,
+        sourceHost: "publisher.example",
+        title: LocalizedText(en: "Publisher headline", zhHans: "出版方标题"),
+        authorName: "News Desk",
+        publishedAtSourceText: "Sep 3, 2026",
+        leadImageURL: nil,
+        body: LocalizedText(en: "Full publisher article.", zhHans: "完整出版方文章。"),
+        paragraphs: ["Full publisher article."],
+        extractionMethod: "json_ld",
+        lastFetchedAt: Date(timeIntervalSince1970: 100)
+    )
 }
