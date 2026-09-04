@@ -4,6 +4,7 @@ protocol ForexAPI: Sendable {
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope
     func news(limit: Int) async throws -> NewsEnvelope
     func newsDetail(id: String) async throws -> NewsItem
+    func topContracts(limit: Int) async throws -> BinanceContractsEnvelope
     func status() async throws -> ServiceStatus
 }
 
@@ -50,6 +51,13 @@ struct APIRequestBuilder: Sendable {
 
     func newsDetail(id: String) throws -> URLRequest {
         try request(path: "/api/v1/news/\(id)")
+    }
+
+    func topContracts(limit: Int) throws -> URLRequest {
+        try request(
+            path: "/api/v1/binance/futures/top-contracts",
+            queryItems: [URLQueryItem(name: "limit", value: String(limit))]
+        )
     }
 
     func status() throws -> URLRequest {
@@ -99,6 +107,10 @@ actor APIClient: ForexAPI {
 
     func newsDetail(id: String) async throws -> NewsItem {
         try await send(builder.newsDetail(id: id))
+    }
+
+    func topContracts(limit: Int = 20) async throws -> BinanceContractsEnvelope {
+        try await send(builder.topContracts(limit: limit))
     }
 
     func status() async throws -> ServiceStatus {

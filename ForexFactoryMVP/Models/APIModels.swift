@@ -78,6 +78,50 @@ struct ListEnvelope<Item: Codable & Sendable>: Codable, Sendable {
 
 typealias CalendarEnvelope = ListEnvelope<CalendarEvent>
 typealias NewsEnvelope = ListEnvelope<NewsItem>
+typealias BinanceContractsEnvelope = ListEnvelope<BinanceFuturesContract>
+
+struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
+    let symbol: String
+    let pair: String
+    let contractType: String
+    let status: String
+    let baseAsset: String
+    let quoteAsset: String
+    let marginAsset: String
+    let lastPrice: Double
+    let weightedAvgPrice: Double
+    let priceChange: Double
+    let priceChangePercent: Double
+    let highPrice: Double
+    let lowPrice: Double
+    let openPrice: Double
+    let volume: Double
+    let quoteVolume: Double
+    let count: Int
+    let volatilityPercent: Double?
+    let updatedAt: Date
+
+    var id: String { symbol }
+
+    enum CodingKeys: String, CodingKey {
+        case symbol, pair, status, count
+        case contractType = "contract_type"
+        case baseAsset = "base_asset"
+        case quoteAsset = "quote_asset"
+        case marginAsset = "margin_asset"
+        case lastPrice = "last_price"
+        case weightedAvgPrice = "weighted_avg_price"
+        case priceChange = "price_change"
+        case priceChangePercent = "price_change_percent"
+        case highPrice = "high_price"
+        case lowPrice = "low_price"
+        case openPrice = "open_price"
+        case volume
+        case quoteVolume = "quote_volume"
+        case volatilityPercent = "volatility_percent"
+        case updatedAt = "updated_at"
+    }
+}
 
 struct ServiceStatus: Codable, Equatable, Sendable {
     let status: String

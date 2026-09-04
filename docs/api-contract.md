@@ -8,6 +8,7 @@ below requires the `X-API-Key` request header.
 - `GET /api/v1/calendar?from=<ISO8601>&to=<ISO8601>`
 - `GET /api/v1/news?limit=50&before=<optional ISO8601>`
 - `GET /api/v1/news/{source_id}`
+- `GET /api/v1/binance/futures/top-contracts?limit=20`
 - `GET /api/v1/status`
 
 Calendar and news list responses use:
