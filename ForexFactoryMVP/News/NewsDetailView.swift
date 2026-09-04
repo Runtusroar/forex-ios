@@ -75,7 +75,7 @@ struct NewsDetailView: View {
                 .tracking(0.6)
             Spacer()
             if let date = detail?.publishedAt ?? summary?.publishedAt {
-                Text(date.formatted(date: .abbreviated, time: .shortened).uppercased())
+                Text(EditorialDateFormatter.newsTime(date))
                     .font(EditorialTheme.smallCaps)
                     .foregroundStyle(EditorialTheme.accent)
             }

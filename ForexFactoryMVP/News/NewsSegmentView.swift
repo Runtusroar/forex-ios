@@ -56,13 +56,21 @@ struct NewsSegmentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let author = segment.authorName {
+            if segment.authorName != nil || segment.publishedAt != nil {
                 HStack {
-                    Text(author.uppercased())
-                        .font(EditorialTheme.smallCaps)
-                        .tracking(0.5)
-                    if let handle = segment.authorHandle {
-                        Text(handle)
+                    if let author = segment.authorName {
+                        Text(author.uppercased())
+                            .font(EditorialTheme.smallCaps)
+                            .tracking(0.5)
+                        if let handle = segment.authorHandle {
+                            Text(handle)
+                                .font(EditorialTheme.metadata)
+                                .foregroundStyle(EditorialTheme.mutedInk)
+                        }
+                    }
+                    Spacer()
+                    if let date = segment.publishedAt {
+                        Text(EditorialDateFormatter.newsTime(date))
                             .font(EditorialTheme.metadata)
                             .foregroundStyle(EditorialTheme.mutedInk)
                     }

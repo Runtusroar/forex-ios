@@ -11,7 +11,7 @@ struct NewsArticleCard: View {
                     .foregroundStyle(EditorialTheme.ink)
                 if let date = article.publishedAt {
                     Text("|").foregroundStyle(EditorialTheme.rule)
-                    Text(date, style: .relative)
+                    Text(EditorialDateFormatter.newsTime(date))
                         .font(EditorialTheme.metadata)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }

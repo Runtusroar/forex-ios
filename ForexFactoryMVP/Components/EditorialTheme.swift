@@ -45,6 +45,15 @@ enum EditorialTheme {
 }
 
 enum EditorialDateFormatter {
+    static func newsTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
     static func publicationDate(
         _ date: Date,
         calendar: Calendar = .current,

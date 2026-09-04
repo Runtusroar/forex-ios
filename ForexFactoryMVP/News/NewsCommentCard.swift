@@ -11,7 +11,7 @@ struct NewsCommentCard: View {
                     .tracking(0.4)
                 Spacer()
                 if let date = comment.publishedAt {
-                    Text(date, style: .relative)
+                    Text(EditorialDateFormatter.newsTime(date))
                         .font(EditorialTheme.metadata)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }
