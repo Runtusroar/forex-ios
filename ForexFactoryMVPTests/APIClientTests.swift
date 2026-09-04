@@ -17,20 +17,24 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(Set(components.queryItems?.map(\.name) ?? []), Set(["from", "to"]))
     }
 
-    func testNewsLimitIsIncluded() throws {
+    func testNewsV2RequestIncludesSectionImpactCursorAndAPIKey() throws {
         let request = try APIRequestBuilder(
-            baseURL: XCTUnwrap(URL(string: "https://zhenmei.shop/api")),
+            baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),
             apiKey: "secret"
-        ).news(limit: 50)
+        ).news(section: .technical, impact: .high, limit: 25, cursor: "opaque")
         let components = try XCTUnwrap(URLComponents(url: XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
 
-        XCTAssertEqual(components.path, "/api/v1/news")
-        XCTAssertEqual(components.queryItems?.first?.value, "50")
+        XCTAssertEqual(components.path, "/api/v2/news")
+        XCTAssertEqual(
+            Dictionary(uniqueKeysWithValues: components.queryItems?.map { ($0.name, $0.value ?? "") } ?? []),
+            ["section": "technical", "impact": "high", "limit": "25", "cursor": "opaque"]
+        )
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
     }
 
     func testTopContractsLimitIsIncluded() throws {
         let request = try APIRequestBuilder(
-            baseURL: XCTUnwrap(URL(string: "https://zhenmei.shop")),
+            baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),
             apiKey: "secret"
         ).topContracts(limit: 20)
         let components = try XCTUnwrap(URLComponents(url: XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
@@ -38,5 +42,20 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(components.path, "/api/v1/binance/futures/top-contracts")
         XCTAssertEqual(components.queryItems?.first?.name, "limit")
         XCTAssertEqual(components.queryItems?.first?.value, "20")
+    }
+
+    func testProtectedMediaAcceptsOnlyBackendRelativePath() throws {
+        let builder = APIRequestBuilder(
+            baseURL: try XCTUnwrap(URL(string: "https://api.juezhou.cc")),
+            apiKey: "secret"
+        )
+
+        let request = try builder.media(path: "/api/v2/news/media/7")
+
+        XCTAssertEqual(request.url?.absoluteString, "https://api.juezhou.cc/api/v2/news/media/7")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
+        XCTAssertThrowsError(try builder.media(path: "https://assets.example/image.png")) { error in
+            XCTAssertEqual(error as? APIError, .invalidConfiguration)
+        }
     }
 }

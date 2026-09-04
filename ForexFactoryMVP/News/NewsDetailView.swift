@@ -1,69 +1,118 @@
 import SwiftUI
 
 struct NewsDetailView: View {
-    let item: NewsItem
+    let articleID: String
+    let summary: NewsArticleSummary?
     let model: NewsViewModel
 
-    @State private var detail: NewsItem?
+    @State private var detail: NewsArticleDetail?
+    @State private var comments: [NewsComment] = []
     @State private var errorMessage: String?
     @State private var isLoading = false
 
-    private var displayedItem: NewsItem { detail ?? item }
-
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text(displayedItem.source ?? "Forex Factory")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                BilingualText(
-                    english: displayedItem.titleEN,
-                    chinese: displayedItem.titleZH,
-                    englishFont: .title2.bold()
-                )
-                if let imageURL = displayedItem.imageURL {
-                    AsyncImage(url: imageURL) { image in
-                        image.resizable().scaledToFit()
-                    } placeholder: {
-                        ProgressView().frame(maxWidth: .infinity, minHeight: 160)
+        ZStack {
+            EditorialTheme.paper.ignoresSafeArea()
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 20) {
+                    header
+                    if let detail {
+                        ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
+                            NewsSegmentView(segment: segment, model: model)
+                        }
+                        if !comments.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                EditorialRule(weight: .double)
+                                Text("COMMENTS")
+                                    .font(EditorialTheme.smallCaps)
+                                    .tracking(1.2)
+                            }
+                            ForEach(comments) { NewsCommentCard(comment: $0) }
+                        }
+                        Link("OPEN ORIGINAL ON FOREX FACTORY", destination: detail.ffURL)
+                            .font(EditorialTheme.smallCaps)
+                            .tracking(0.5)
+                            .foregroundStyle(EditorialTheme.accent)
+                            .underline()
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                if let body = displayedItem.bodyEN, !body.isEmpty {
-                    Text(body).font(.body)
-                }
-                if let body = displayedItem.bodyZH, !body.isEmpty {
-                    Divider()
-                    Text(body)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                if isLoading { ProgressView("Loading full story…") }
-                if let errorMessage {
-                    ContentUnavailableView {
-                        Label("Unable to load full story", systemImage: "wifi.exclamationmark")
-                    } description: {
-                        Text(errorMessage)
-                    } actions: {
-                        Button("Retry") { Task { await load() } }
+                    if isLoading {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text("LOADING FOREX FACTORY DETAIL…")
+                                .font(EditorialTheme.smallCaps)
+                        }
+                    }
+                    if let errorMessage {
+                        ContentUnavailableView {
+                            Label("Unable to load detail", systemImage: "wifi.exclamationmark")
+                        } description: {
+                            Text(errorMessage)
+                        } actions: {
+                            Button("Retry") { Task { await load() } }
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 30)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
         }
-        .navigationTitle("News Detail")
+        .navigationTitle("ARTICLE")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .task(id: articleID) { await load() }
     }
 
-    @MainActor
+    @ViewBuilder
+    private var header: some View {
+        let source = detail?.sourceName ?? summary?.sourceName ?? "Forex Factory"
+        let title = detail?.title ?? summary?.title
+        let teaser = detail?.teaser ?? summary?.teaser
+        HStack(alignment: .firstTextBaseline) {
+            Text(source.uppercased())
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.6)
+            Spacer()
+            if let date = detail?.publishedAt ?? summary?.publishedAt {
+                Text(EditorialDateFormatter.newsTime(date))
+                    .font(EditorialTheme.smallCaps)
+                    .foregroundStyle(EditorialTheme.accent)
+            }
+        }
+        .padding(.top, 12)
+        BilingualText(
+            english: title?.en ?? "Loading…",
+            chinese: title?.zhHans,
+            role: .headline,
+            englishFont: .title2.bold()
+        )
+        if detail == nil || detail?.segments.isEmpty == true {
+            if let english = teaser?.en, !english.isEmpty {
+                Text(english)
+                    .font(.system(.subheadline, design: .serif))
+                    .foregroundStyle(EditorialTheme.ink.opacity(0.86))
+            }
+            if let chinese = teaser?.zhHans, !chinese.isEmpty {
+                Text(chinese)
+                    .font(.footnote)
+                    .foregroundStyle(EditorialTheme.mutedInk)
+            }
+        }
+        EditorialRule(weight: .strong)
+    }
+
     private func load() async {
+        guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
-            detail = try await model.detail(id: item.sourceID)
+            async let loadedDetail = model.v2Detail(id: articleID)
+            async let loadedComments = model.comments(id: articleID)
+            detail = try await loadedDetail
+            let commentEnvelope = try? await loadedComments
+            comments = commentEnvelope?.items ?? []
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Please try again."
         }

@@ -24,6 +24,8 @@ struct ForexFactoryMVPApp: App {
                 newsModel: newsModel,
                 contractsModel: contractsModel
             )
+            .background(EditorialTheme.paper)
+            .foregroundStyle(EditorialTheme.ink)
         }
     }
 }

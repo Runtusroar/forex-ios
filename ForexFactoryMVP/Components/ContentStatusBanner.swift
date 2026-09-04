@@ -6,23 +6,29 @@ struct ContentStatusBanner: View {
 
     var body: some View {
         if message != nil || staleSince != nil {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+            HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 2) {
                     if let message { Text(message) }
                     if let staleSince {
                         Text("Saved \(staleSince.formatted(date: .abbreviated, time: .shortened))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(EditorialTheme.metadata)
+                            .foregroundStyle(EditorialTheme.mutedInk)
                     }
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.leading, 13)
             .font(.footnote)
             .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.orange.opacity(0.08))
+            .padding(.vertical, 10)
+            .background(EditorialTheme.subtleSurface)
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(EditorialTheme.accent)
+                    .frame(width: 3)
+                    .padding(.leading, 16)
+                    .padding(.vertical, 10)
+            }
             .accessibilityElement(children: .combine)
         }
     }

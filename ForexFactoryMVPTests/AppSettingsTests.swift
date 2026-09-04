@@ -11,13 +11,28 @@ private final class MemoryKeyStore: APIKeyStoring, @unchecked Sendable {
 
 final class AppSettingsTests: XCTestCase {
     @MainActor
-    func testDefaultBaseURLUsesPublicTunnelHost() {
-        let settings = AppSettings(
-            defaults: UserDefaults(suiteName: UUID().uuidString)!,
-            keyStore: MemoryKeyStore()
-        )
+    func testMissingAndLegacyDefaultURLsMigrateToCurrentBackend() {
+        for storedValue in [nil, "https://zhenmei.shop", "https://zhenmei.shop/"] as [String?] {
+            let defaults = UserDefaults(suiteName: UUID().uuidString)!
+            if let storedValue {
+                defaults.set(storedValue, forKey: "api.baseURL")
+            }
 
-        XCTAssertEqual(settings.baseURLText, "https://api.juezhou.cc")
+            let settings = AppSettings(defaults: defaults, keyStore: MemoryKeyStore())
+
+            XCTAssertEqual(settings.baseURLText, "https://api.juezhou.cc")
+            XCTAssertEqual(defaults.string(forKey: "api.baseURL"), "https://api.juezhou.cc")
+        }
+    }
+
+    @MainActor
+    func testCustomBackendURLIsNotMigrated() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        defaults.set("https://private.example", forKey: "api.baseURL")
+
+        let settings = AppSettings(defaults: defaults, keyStore: MemoryKeyStore())
+
+        XCTAssertEqual(settings.baseURLText, "https://private.example")
     }
 
     @MainActor

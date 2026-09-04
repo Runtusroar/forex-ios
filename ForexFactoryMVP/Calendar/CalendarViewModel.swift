@@ -7,6 +7,7 @@ final class CalendarViewModel {
     private let makeAPI: @MainActor @Sendable () throws -> any ForexAPI
     private let cache: ResponseCache
     private let refreshLoop: RefreshLoop
+    private let now: @Sendable () -> Date
     private var activationTask: Task<Void, Never>?
 
     var events: [CalendarEvent] = []
@@ -17,17 +18,20 @@ final class CalendarViewModel {
     init(
         api: any ForexAPI,
         cache: ResponseCache,
-        refreshLoop: RefreshLoop = RefreshLoop()
+        refreshLoop: RefreshLoop = RefreshLoop(),
+        now: @escaping @Sendable () -> Date = Date.init
     ) {
         makeAPI = { api }
         self.cache = cache
         self.refreshLoop = refreshLoop
+        self.now = now
     }
 
     init(
         settings: AppSettings,
         cache: ResponseCache,
-        refreshLoop: RefreshLoop = RefreshLoop()
+        refreshLoop: RefreshLoop = RefreshLoop(),
+        now: @escaping @Sendable () -> Date = Date.init
     ) {
         makeAPI = {
             let credentials = try settings.credentials()
@@ -35,6 +39,7 @@ final class CalendarViewModel {
         }
         self.cache = cache
         self.refreshLoop = refreshLoop
+        self.now = now
     }
 
     func activate() {
@@ -58,12 +63,13 @@ final class CalendarViewModel {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
-            let now = Date()
-            let calendar = Calendar.current
-            let start = calendar.startOfDay(for: now)
-            let end = calendar.date(byAdding: .day, value: 7, to: start) ?? now
+            let current = now()
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)!
+            let start = calendar.startOfDay(for: current)
+            let end = calendar.date(byAdding: .day, value: 8, to: start) ?? current
             let envelope = try await makeAPI().calendar(from: start, to: end)
-            events = envelope.items.sorted { $0.eventAt < $1.eventAt }
+            events = envelope.items.sorted(by: calendarEventPrecedes)
             staleSince = nil
             errorMessage = nil
             try await cache.save(envelope, as: .calendar)
@@ -78,11 +84,21 @@ final class CalendarViewModel {
         guard let envelope = try? await cache.load(.calendar, as: CalendarEnvelope.self) else {
             return
         }
-        events = envelope.items.sorted { $0.eventAt < $1.eventAt }
+        events = envelope.items.sorted(by: calendarEventPrecedes)
         staleSince = envelope.generatedAt
     }
 
     private func readableMessage(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? "Unable to load the calendar."
+    }
+
+    private func calendarEventPrecedes(_ lhs: CalendarEvent, _ rhs: CalendarEvent) -> Bool {
+        let lhsDay = EditorialDateFormatter.calendarDay(lhs.eventAt)
+        let rhsDay = EditorialDateFormatter.calendarDay(rhs.eventAt)
+        if lhsDay != rhsDay { return lhsDay < rhsDay }
+        if lhs.sourcePosition != rhs.sourcePosition {
+            return lhs.sourcePosition < rhs.sourcePosition
+        }
+        return lhs.eventAt < rhs.eventAt
     }
 }

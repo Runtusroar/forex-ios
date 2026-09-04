@@ -1,11 +1,20 @@
 import Foundation
 
-enum CacheKey: String, Sendable {
+enum CacheKey: Sendable {
     case calendar
-    case news
     case contracts
+    case news(section: NewsSectionID, impact: Impact?)
 
-    var fileName: String { "\(rawValue)-v1.json" }
+    var fileName: String {
+        switch self {
+        case .calendar:
+            "calendar-v1.json"
+        case .contracts:
+            "binance-futures-contracts-v1.json"
+        case let .news(section, impact):
+            "news-v2-\(section.rawValue)-\(impact?.rawValue ?? "all").json"
+        }
+    }
 }
 
 actor ResponseCache {
