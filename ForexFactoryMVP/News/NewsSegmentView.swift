@@ -11,11 +11,15 @@ struct NewsSegmentPresentationModel: Equatable, Sendable {
     let lineLimit: Int?
     let externalAction: NewsSegmentExternalAction?
     let primaryExternalURL: URL?
+    let visibleMedia: [NewsMedia]
 
     init(segment: NewsSegment) {
         let fullStory = segment.links
             .sorted(by: { $0.position < $1.position })
             .first(where: { $0.kind == .fullStory })
+        visibleMedia = segment.media
+            .sorted(by: { $0.position < $1.position })
+            .filter { NewsMediaPresentation(media: $0).state != .unavailable }
         primaryExternalURL = fullStory?.url ?? segment.sourceURL
         lineLimit = segment.presentation.mode == .clamped
             ? segment.presentation.maxLines
@@ -81,7 +85,7 @@ struct NewsSegmentView: View {
             } else {
                 bilingualText
             }
-            ForEach(segment.media.sorted(by: { $0.position < $1.position })) { media in
+            ForEach(presentation.visibleMedia) { media in
                 NewsMediaView(media: media, model: model)
                     .contentShape(Rectangle())
                     .onTapGesture {

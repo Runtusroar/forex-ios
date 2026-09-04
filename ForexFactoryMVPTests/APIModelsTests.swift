@@ -150,6 +150,19 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(NewsMediaPresentation(media: processing).state, .processing)
     }
 
+    func testSegmentPresentationHidesUnavailableMedia() {
+        let segment = sampleNewsSegment(
+            media: [
+                sampleNewsMedia(downloadState: .failed, url: nil),
+                sampleNewsMedia(downloadState: .complete, url: "/api/v2/news/media/7")
+            ]
+        )
+
+        let presentation = NewsSegmentPresentationModel(segment: segment)
+
+        XCTAssertEqual(presentation.visibleMedia.map(\.url), ["/api/v2/news/media/7"])
+    }
+
     func testBinanceFuturesContractDecodesMarketMetrics() throws {
         let json = #"{"symbol":"BTCUSDT","pair":"BTCUSDT","contract_type":"PERPETUAL","market_type":"crypto","underlying_type":"COIN","underlying_subtypes":["Layer 1"],"status":"TRADING","base_asset":"BTC","quote_asset":"USDT","margin_asset":"USDT","last_price":102000.0,"weighted_avg_price":101000.0,"price_change":100.0,"price_change_percent":2.5,"high_price":110000.0,"low_price":95000.0,"open_price":100000.0,"volume":1000.0,"quote_volume":102000000.0,"count":100,"volatility_percent":15.0,"updated_at":"2026-09-04T12:20:00Z"}"#
         let contract = try JSONDecoder.api.decode(BinanceFuturesContract.self, from: Data(json.utf8))
