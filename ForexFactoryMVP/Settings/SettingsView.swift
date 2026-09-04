@@ -87,6 +87,7 @@ struct SettingsView: View {
             }
             .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 

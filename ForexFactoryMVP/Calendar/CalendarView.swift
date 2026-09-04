@@ -64,6 +64,7 @@ struct CalendarView: View {
             }
             .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .toolbar {
                 if model.isRefreshing {
                     ToolbarItem(placement: .topBarTrailing) { ProgressView() }

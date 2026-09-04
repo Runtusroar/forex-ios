@@ -12,11 +12,7 @@ struct NewsListView: View {
                     content
                 }
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar { toolbarContent }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -86,6 +82,12 @@ struct NewsListView: View {
             EditorialMasthead(section: "News")
                 .padding(.horizontal)
                 .padding(.top, 8)
+            HStack {
+                impactFilterMenu
+                Spacer()
+                if model.isRefreshing { ProgressView() }
+            }
+            .padding(.horizontal)
             NewsSectionPicker(model: model)
         }
         .background(EditorialTheme.paper)
@@ -97,22 +99,26 @@ struct NewsListView: View {
             : model.currentArticles.isEmpty
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
+    @ViewBuilder
+    private var impactFilterMenu: some View {
         if model.selectedSection != .latestComments {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("All impact") { Task { await model.setImpactFilter(nil) } }
-                    Button("High impact") { Task { await model.setImpactFilter(.high) } }
-                    Button("Medium impact") { Task { await model.setImpactFilter(.medium) } }
-                    Button("Low impact") { Task { await model.setImpactFilter(.low) } }
-                } label: {
-                    Label(impactFilterLabel, systemImage: "line.3.horizontal.decrease.circle")
+            Menu {
+                Button("All impact") { Task { await model.setImpactFilter(nil) } }
+                Button("High impact") { Task { await model.setImpactFilter(.high) } }
+                Button("Medium impact") { Task { await model.setImpactFilter(.medium) } }
+                Button("Low impact") { Task { await model.setImpactFilter(.low) } }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("\(impactFilterLabel) IMPACT")
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
                 }
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.7)
+                .foregroundStyle(EditorialTheme.ink)
+                .padding(.vertical, 4)
             }
-        }
-        if model.isRefreshing {
-            ToolbarItem(placement: .topBarTrailing) { ProgressView() }
+            .buttonStyle(.plain)
         }
     }
 
