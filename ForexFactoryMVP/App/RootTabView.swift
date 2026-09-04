@@ -16,6 +16,9 @@ struct RootTabView: View {
             SettingsView(settings: settings)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
+        .tint(EditorialTheme.accent)
+        .toolbarBackground(EditorialTheme.paper, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .onAppear { update(for: scenePhase) }
         .onChange(of: scenePhase) { _, newPhase in update(for: newPhase) }
     }
