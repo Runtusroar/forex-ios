@@ -10,20 +10,23 @@ struct RootTabView: View {
     @State private var selection: RootTab = .news
 
     var body: some View {
-        ZStack {
-            EditorialTheme.paper.ignoresSafeArea()
-            switch selection {
-            case .calendar:
-                CalendarView(model: calendarModel)
-            case .news:
-                NewsListView(model: newsModel)
-            case .contracts:
-                ContractsView(model: contractsModel)
-            case .settings:
-                SettingsView(settings: settings)
+        VStack(spacing: 0) {
+            ZStack {
+                EditorialTheme.paper.ignoresSafeArea()
+                switch selection {
+                case .calendar:
+                    CalendarView(model: calendarModel)
+                case .news:
+                    NewsListView(model: newsModel)
+                case .contracts:
+                    ContractsView(model: contractsModel)
+                case .settings:
+                    SettingsView(settings: settings)
+                }
             }
+            editorialTabBar
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { editorialTabBar }
+        .background(EditorialTheme.paper.ignoresSafeArea())
         .tint(EditorialTheme.accent)
         .onAppear { update(for: scenePhase) }
         .onChange(of: scenePhase) { _, newPhase in update(for: newPhase) }
@@ -55,7 +58,7 @@ struct RootTabView: View {
                 }
             }
         }
-        .background(EditorialTheme.paper.ignoresSafeArea())
+        .background(EditorialTheme.paper)
     }
 
     private func update(for phase: ScenePhase) {

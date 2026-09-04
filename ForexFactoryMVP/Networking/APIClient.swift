@@ -2,6 +2,7 @@ import Foundation
 
 protocol ForexAPI: Sendable {
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope
+    func calendarDetail(id: String) async throws -> CalendarDetail
     func newsSections() async throws -> NewsSectionsEnvelope
     func news(
         section: NewsSectionID,
@@ -18,6 +19,10 @@ protocol ForexAPI: Sendable {
 }
 
 extension ForexAPI {
+    func calendarDetail(id: String) async throws -> CalendarDetail {
+        throw APIError.invalidConfiguration
+    }
+
     func newsSections() async throws -> NewsSectionsEnvelope { throw APIError.invalidConfiguration }
 
     func news(
@@ -84,6 +89,10 @@ struct APIRequestBuilder: Sendable {
                 URLQueryItem(name: "to", value: Self.iso8601(end)),
             ]
         )
+    }
+
+    func calendarDetail(id: String) throws -> URLRequest {
+        try request(path: "/api/v1/calendar/\(id)")
     }
 
     func newsSections() throws -> URLRequest {
@@ -188,6 +197,10 @@ actor APIClient: ForexAPI {
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
         try await send(builder.calendar(from: start, to: end))
+    }
+
+    func calendarDetail(id: String) async throws -> CalendarDetail {
+        try await send(builder.calendarDetail(id: id))
     }
 
     func newsSections() async throws -> NewsSectionsEnvelope {

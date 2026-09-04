@@ -15,6 +15,7 @@ private actor StubForexAPI: ForexAPI {
     }
 
     private var calendarEnvelope: CalendarEnvelope
+    private var calendarDetails: [String: CalendarDetail] = [:]
     private var topContractsEnvelopes: [ContractMarketFilter: BinanceContractsEnvelope]
     private var articlePages: [String: NewsArticlesEnvelope] = [:]
     private var commentsEnvelope = NewsCommentsEnvelope(
@@ -45,6 +46,10 @@ private actor StubForexAPI: ForexAPI {
         topContractsEnvelopes[marketType] = envelope
     }
 
+    func setCalendarDetail(_ detail: CalendarDetail) {
+        calendarDetails[detail.sourceID] = detail
+    }
+
     func setArticlePage(
         section: NewsSectionID,
         impact: Impact? = nil,
@@ -70,6 +75,12 @@ private actor StubForexAPI: ForexAPI {
         if shouldFail { throw URLError(.notConnectedToInternet) }
         calendarCalls.append(CalendarCall(start: start, end: end))
         return calendarEnvelope
+    }
+
+    func calendarDetail(id: String) async throws -> CalendarDetail {
+        if shouldFail { throw URLError(.notConnectedToInternet) }
+        guard let detail = calendarDetails[id] else { throw APIError.notFound }
+        return detail
     }
 
     func newsSections() async throws -> NewsSectionsEnvelope {
@@ -146,6 +157,24 @@ final class ViewModelTests: XCTestCase {
         let call = try XCTUnwrap(requestedRanges.first)
         XCTAssertEqual(call.start, expectedStart)
         XCTAssertEqual(call.end, expectedEnd)
+    }
+
+    @MainActor
+    func testCalendarDetailLoadsThroughInjectedAPI() async throws {
+        let api = StubForexAPI(
+            calendar: CalendarEnvelope(
+                items: [sampleEvent(id: "149673")],
+                generatedAt: Date(timeIntervalSince1970: 300)
+            )
+        )
+        await api.setCalendarDetail(sampleCalendarDetail(id: "149673"))
+        let model = CalendarViewModel(api: api, cache: ResponseCache(directory: temporaryDirectory()))
+
+        let detail = try await model.detail(for: sampleEvent(id: "149673"))
+
+        XCTAssertEqual(detail.sourceID, "149673")
+        XCTAssertEqual(detail.sourceName, "METI")
+        XCTAssertEqual(detail.history[0].releaseDateText, "Aug 31, 2026")
     }
 
     @MainActor
@@ -345,6 +374,47 @@ private func sampleEvent(id: String) -> CalendarEvent {
         forecast: "100K",
         previous: "90K",
         updatedAt: Date(timeIntervalSince1970: 201)
+    )
+}
+
+private func sampleCalendarDetail(id: String) -> CalendarDetail {
+    CalendarDetail(
+        sourceID: id,
+        titleEN: "Prelim Industrial Production m/m",
+        currency: "JPY",
+        currencyName: "Japanese yen",
+        impact: .low,
+        actual: "0.1%",
+        forecast: "-0.7%",
+        previous: "1.9%",
+        actualState: .better,
+        previousState: .better,
+        previousRevisedFrom: "1.3%",
+        ffURL: URL(string: "https://www.forexfactory.com/calendar/225-jn-prelim-industrial-production-mm"),
+        sourceName: "METI",
+        sourceURL: URL(string: "https://www.meti.go.jp/english/"),
+        latestReleaseURL: nil,
+        measures: "Change in total output;",
+        usualEffect: "'Actual' greater than 'Forecast' is good for currency;",
+        frequency: "Released monthly;",
+        nextReleaseText: "Sep 30, 2026",
+        nextReleaseURL: URL(string: "https://www.forexfactory.com/calendar?day=sep30.2026#detail=149674"),
+        ffNotes: nil,
+        whyTradersCare: "It is a leading indicator;",
+        history: [
+            CalendarHistoryEntry(
+                releaseDateText: "Aug 31, 2026",
+                eventURL: URL(string: "https://www.forexfactory.com/calendar?day=aug31.2026#detail=149673"),
+                actual: "0.1%",
+                forecast: "-0.7%",
+                previous: "1.9%",
+                actualState: .better,
+                previousState: .better,
+                previousRevisedFrom: "1.3%"
+            )
+        ],
+        relatedStories: [],
+        updatedAt: Date(timeIntervalSince1970: 400)
     )
 }
 

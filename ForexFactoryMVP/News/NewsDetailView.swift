@@ -1,5 +1,21 @@
 import SwiftUI
 
+struct NewsDetailMediaPresentation: Equatable, Sendable {
+    let fallbackThumbnailURL: URL?
+
+    init(detail: NewsArticleDetail?, summary: NewsArticleSummary?) {
+        let hasDisplayableSegmentMedia = detail?.segments.contains { segment in
+            segment.media.contains { media in
+                NewsMediaPresentation(media: media).hasDisplayableImage
+            }
+        } ?? false
+
+        fallbackThumbnailURL = hasDisplayableSegmentMedia
+            ? nil
+            : detail?.thumbnailURL ?? summary?.thumbnailURL
+    }
+}
+
 struct NewsDetailView: View {
     let articleID: String
     let summary: NewsArticleSummary?
@@ -10,12 +26,17 @@ struct NewsDetailView: View {
     @State private var errorMessage: String?
     @State private var isLoading = false
 
+    private var mediaPresentation: NewsDetailMediaPresentation {
+        NewsDetailMediaPresentation(detail: detail, summary: summary)
+    }
+
     var body: some View {
         ZStack {
             EditorialTheme.paper.ignoresSafeArea()
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     header
+                    fallbackThumbnail
                     if let detail {
                         ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
                             NewsSegmentView(segment: segment, model: model)
@@ -100,6 +121,34 @@ struct NewsDetailView: View {
             }
         }
         EditorialRule(weight: .strong)
+    }
+
+    @ViewBuilder
+    private var fallbackThumbnail: some View {
+        if let url = mediaPresentation.fallbackThumbnailURL {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                case .failure:
+                    EmptyView()
+                case .empty:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 140)
+                @unknown default:
+                    EmptyView()
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .background(EditorialTheme.subtleSurface)
+            .overlay {
+                Rectangle()
+                    .stroke(EditorialTheme.rule.opacity(0.35), lineWidth: 0.5)
+            }
+            .accessibilityLabel("Article thumbnail")
+        }
     }
 
     private func load() async {

@@ -88,6 +88,10 @@ final class CalendarViewModel {
         staleSince = envelope.generatedAt
     }
 
+    func detail(for event: CalendarEvent) async throws -> CalendarDetail {
+        try await makeAPI().calendarDetail(id: event.sourceID)
+    }
+
     private func readableMessage(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? "Unable to load the calendar."
     }

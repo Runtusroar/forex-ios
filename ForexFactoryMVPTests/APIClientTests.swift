@@ -17,6 +17,17 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(Set(components.queryItems?.map(\.name) ?? []), Set(["from", "to"]))
     }
 
+    func testCalendarDetailRequestUsesVersionedPathAndAPIKey() throws {
+        let request = try APIRequestBuilder(
+            baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),
+            apiKey: "secret"
+        ).calendarDetail(id: "149673")
+        let components = try XCTUnwrap(URLComponents(url: XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(components.path, "/api/v1/calendar/149673")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
+    }
+
     func testNewsV2RequestIncludesSectionImpactCursorAndAPIKey() throws {
         let request = try APIRequestBuilder(
             baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),

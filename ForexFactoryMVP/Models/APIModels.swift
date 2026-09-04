@@ -18,6 +18,22 @@ enum Impact: String, Codable, Hashable, Sendable {
     }
 }
 
+enum CalendarValueState: String, Codable, Hashable, Sendable {
+    case better
+    case worse
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = CalendarValueState(rawValue: value) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
 struct LocalizedText: Codable, Equatable, Sendable {
     let en: String?
     let zhHans: String?
@@ -479,6 +495,104 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
         sourceTimeText = try container.decodeIfPresent(String.self, forKey: .sourceTimeText)
         sourcePosition = try container.decodeIfPresent(Int.self, forKey: .sourcePosition) ?? 0
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+}
+
+struct CalendarHistoryEntry: Codable, Identifiable, Equatable, Sendable {
+    let releaseDateText: String
+    let eventURL: URL?
+    let actual: String?
+    let forecast: String?
+    let previous: String?
+    let actualState: CalendarValueState?
+    let previousState: CalendarValueState?
+    let previousRevisedFrom: String?
+
+    var id: String { [releaseDateText, eventURL?.absoluteString ?? ""].joined(separator: "|") }
+
+    enum CodingKeys: String, CodingKey {
+        case releaseDateText = "release_date_text"
+        case eventURL = "event_url"
+        case actual, forecast, previous
+        case actualState = "actual_state"
+        case previousState = "previous_state"
+        case previousRevisedFrom = "previous_revised_from"
+    }
+}
+
+struct CalendarRelatedStory: Codable, Identifiable, Equatable, Sendable {
+    let titleEN: String
+    let ffURL: URL
+    let sourceName: String?
+    let sourceURL: URL?
+    let publishedAtSourceText: String?
+    let preview: String?
+
+    var id: URL { ffURL }
+
+    enum CodingKeys: String, CodingKey {
+        case titleEN = "title_en"
+        case ffURL = "ff_url"
+        case sourceName = "source_name"
+        case sourceURL = "source_url"
+        case publishedAtSourceText = "published_at_source_text"
+        case preview
+    }
+}
+
+struct CalendarDetail: Codable, Identifiable, Equatable, Sendable {
+    let sourceID: String
+    let titleEN: String
+    let currency: String?
+    let currencyName: String?
+    let impact: Impact?
+    let actual: String?
+    let forecast: String?
+    let previous: String?
+    let actualState: CalendarValueState?
+    let previousState: CalendarValueState?
+    let previousRevisedFrom: String?
+    let ffURL: URL?
+    let sourceName: String?
+    let sourceURL: URL?
+    let latestReleaseURL: URL?
+    let measures: String?
+    let usualEffect: String?
+    let frequency: String?
+    let nextReleaseText: String?
+    let nextReleaseURL: URL?
+    let ffNotes: String?
+    let whyTradersCare: String?
+    let history: [CalendarHistoryEntry]
+    let relatedStories: [CalendarRelatedStory]
+    let updatedAt: Date
+
+    var id: String { sourceID }
+
+    enum CodingKeys: String, CodingKey {
+        case sourceID = "source_id"
+        case titleEN = "title_en"
+        case currency
+        case currencyName = "currency_name"
+        case impact
+        case actual, forecast, previous
+        case actualState = "actual_state"
+        case previousState = "previous_state"
+        case previousRevisedFrom = "previous_revised_from"
+        case ffURL = "ff_url"
+        case sourceName = "source_name"
+        case sourceURL = "source_url"
+        case latestReleaseURL = "latest_release_url"
+        case measures
+        case usualEffect = "usual_effect"
+        case frequency
+        case nextReleaseText = "next_release_text"
+        case nextReleaseURL = "next_release_url"
+        case ffNotes = "ff_notes"
+        case whyTradersCare = "why_traders_care"
+        case history
+        case relatedStories = "related_stories"
+        case updatedAt = "updated_at"
     }
 }
 

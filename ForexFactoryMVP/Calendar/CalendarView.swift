@@ -38,10 +38,15 @@ struct CalendarView: View {
                         ForEach(sections, id: \.date) { section in
                             Section {
                                 ForEach(section.events) { event in
-                                    CalendarEventRow(event: event)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(EditorialTheme.paper)
+                                    NavigationLink {
+                                        CalendarDetailView(event: event, model: model)
+                                    } label: {
+                                        CalendarEventRow(event: event)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(EditorialTheme.paper)
                                 }
                             } header: {
                                 VStack(alignment: .leading, spacing: 8) {
