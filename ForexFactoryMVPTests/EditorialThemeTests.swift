@@ -13,12 +13,26 @@ final class EditorialThemeTests: XCTestCase {
         XCTAssertEqual(value, "SEP 4, 2026")
     }
 
-    func testNewsTimeUsesFixedUTCPlusEightClock() throws {
+    func testNewsTimeUsesCompactClockBecauseTimezoneLivesInHeader() throws {
         let date = try XCTUnwrap(
             ISO8601DateFormatter().date(from: "2026-09-03T01:05:00Z")
         )
 
-        XCTAssertEqual(EditorialDateFormatter.newsTime(date), "09:05 UTC+8")
+        XCTAssertEqual(EditorialDateFormatter.newsTime(date), "09:05")
+    }
+
+    func testNewsImpactFilterOptionsMapToAPIValuesInEditorialOrder() {
+        XCTAssertEqual(
+            NewsImpactFilterOption.allCases.map(\.impact),
+            [nil, .high, .medium, .low]
+        )
+    }
+
+    func testNewsImpactFilterSelectionMarksOnlyCurrentChoice() {
+        XCTAssertFalse(NewsImpactFilterOption.all.isSelected(filter: .high))
+        XCTAssertTrue(NewsImpactFilterOption.high.isSelected(filter: .high))
+        XCTAssertFalse(NewsImpactFilterOption.medium.isSelected(filter: .high))
+        XCTAssertFalse(NewsImpactFilterOption.low.isSelected(filter: .high))
     }
 
     func testCalendarTimeUsesFixedUTCPlusEightClock() throws {

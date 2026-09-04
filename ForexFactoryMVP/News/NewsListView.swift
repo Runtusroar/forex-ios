@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NewsListView: View {
     @Bindable var model: NewsViewModel
+    @State private var isImpactFilterPresented = false
 
     var body: some View {
         NavigationStack {
@@ -10,6 +11,9 @@ struct NewsListView: View {
                 VStack(spacing: 0) {
                     ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
                     content
+                }
+                if isImpactFilterPresented {
+                    impactFilterOverlay
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -79,11 +83,20 @@ struct NewsListView: View {
 
     private var newspaperHeader: some View {
         VStack(spacing: 10) {
-            EditorialMasthead(section: "News")
+            VStack(spacing: 10) {
+                EditorialMasthead(section: "News")
+                HStack {
+                    Spacer()
+                    Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
+                        .font(EditorialTheme.smallCaps)
+                        .tracking(0.8)
+                        .foregroundStyle(EditorialTheme.accent)
+                }
+            }
                 .padding(.horizontal)
                 .padding(.top, 8)
             HStack {
-                impactFilterMenu
+                impactFilterButton
                 Spacer()
                 if model.isRefreshing { ProgressView() }
             }
@@ -100,13 +113,12 @@ struct NewsListView: View {
     }
 
     @ViewBuilder
-    private var impactFilterMenu: some View {
+    private var impactFilterButton: some View {
         if model.selectedSection != .latestComments {
-            Menu {
-                Button("All impact") { Task { await model.setImpactFilter(nil) } }
-                Button("High impact") { Task { await model.setImpactFilter(.high) } }
-                Button("Medium impact") { Task { await model.setImpactFilter(.medium) } }
-                Button("Low impact") { Task { await model.setImpactFilter(.low) } }
+            Button {
+                withAnimation(.easeOut(duration: 0.16)) {
+                    isImpactFilterPresented = true
+                }
             } label: {
                 HStack(spacing: 6) {
                     Text("\(impactFilterLabel) IMPACT")
@@ -119,6 +131,34 @@ struct NewsListView: View {
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Filter by impact")
+            .accessibilityValue(impactFilterLabel)
+        }
+    }
+
+    private var impactFilterOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.42)
+                .ignoresSafeArea()
+                .onTapGesture { dismissImpactFilter() }
+
+            NewsImpactFilterDialog(
+                selectedImpact: model.impactFilter,
+                onSelect: { option in
+                    dismissImpactFilter()
+                    Task { await model.setImpactFilter(option.impact) }
+                },
+                onDismiss: dismissImpactFilter
+            )
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity)
+        .zIndex(1)
+    }
+
+    private func dismissImpactFilter() {
+        withAnimation(.easeIn(duration: 0.12)) {
+            isImpactFilterPresented = false
         }
     }
 
@@ -129,5 +169,110 @@ struct NewsListView: View {
         case .low: "Low"
         default: "All"
         }
+    }
+}
+
+enum NewsImpactFilterOption: String, CaseIterable, Identifiable {
+    case all = "ALL IMPACT"
+    case high = "HIGH IMPACT"
+    case medium = "MEDIUM IMPACT"
+    case low = "LOW IMPACT"
+
+    var id: Self { self }
+
+    var impact: Impact? {
+        switch self {
+        case .all: nil
+        case .high: .high
+        case .medium: .medium
+        case .low: .low
+        }
+    }
+
+    func isSelected(filter: Impact?) -> Bool {
+        impact == filter
+    }
+}
+
+private struct NewsImpactFilterDialog: View {
+    let selectedImpact: Impact?
+    let onSelect: (NewsImpactFilterOption) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("NEWS DESK")
+                        .font(EditorialTheme.smallCaps)
+                        .tracking(1.1)
+                        .foregroundStyle(EditorialTheme.accent)
+                    Text("Filter by impact")
+                        .font(EditorialTheme.headline(.title2))
+                }
+                Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close impact filter")
+            }
+            .padding(.leading, 18)
+            .padding(.trailing, 8)
+            .padding(.vertical, 12)
+
+            EditorialRule(weight: .double)
+
+            ForEach(Array(NewsImpactFilterOption.allCases.enumerated()), id: \.element.id) { index, option in
+                Button {
+                    onSelect(option)
+                } label: {
+                    HStack(spacing: 12) {
+                        Rectangle()
+                            .fill(option.isSelected(filter: selectedImpact) ? EditorialTheme.accent : .clear)
+                            .frame(width: 3, height: 24)
+                        Text(option.rawValue)
+                            .font(EditorialTheme.metadata.weight(.bold))
+                            .tracking(0.7)
+                        Spacer()
+                        if option.isSelected(filter: selectedImpact) {
+                            Text("SELECTED")
+                                .font(EditorialTheme.smallCaps)
+                                .tracking(0.6)
+                                .foregroundStyle(EditorialTheme.accent)
+                            Image(systemName: "checkmark")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(EditorialTheme.accent)
+                        }
+                    }
+                    .foregroundStyle(EditorialTheme.ink)
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 54)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(option.isSelected(filter: selectedImpact) ? "Selected" : "")
+
+                if index < NewsImpactFilterOption.allCases.count - 1 {
+                    EditorialRule()
+                        .padding(.horizontal, 18)
+                }
+            }
+        }
+        .background(EditorialTheme.paper)
+        .background {
+            Rectangle()
+                .fill(Color.black.opacity(0.35))
+                .offset(x: 6, y: 6)
+        }
+        .overlay {
+            Rectangle()
+                .stroke(EditorialTheme.ink, lineWidth: 2)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(.escape, onDismiss)
     }
 }

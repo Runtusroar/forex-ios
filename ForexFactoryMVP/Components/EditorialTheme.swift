@@ -52,7 +52,7 @@ enum EditorialDateFormatter {
     }
 
     static func newsTime(_ date: Date) -> String {
-        "\(calendarTime(date)) \(utcPlusEightLabel)"
+        calendarTime(date)
     }
 
     static func calendarTime(_ date: Date) -> String {
