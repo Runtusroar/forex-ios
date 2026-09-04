@@ -64,6 +64,10 @@ enum EditorialDateFormatter {
         return formatter.string(from: date)
     }
 
+    static func calendarTime(_ event: CalendarEvent) -> String {
+        event.sourceTimeText ?? calendarTime(event.eventAt)
+    }
+
     static func calendarDay(_ date: Date) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = utcPlusEightTimeZone

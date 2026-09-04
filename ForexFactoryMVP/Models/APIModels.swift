@@ -419,6 +419,8 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
     let actual: String?
     let forecast: String?
     let previous: String?
+    let sourceTimeText: String?
+    let sourcePosition: Int
     let updatedAt: Date
 
     var id: String { sourceID }
@@ -430,7 +432,53 @@ struct CalendarEvent: Codable, Identifiable, Equatable, Sendable {
         case titleEN = "title_en"
         case titleZH = "title_zh"
         case actual, forecast, previous
+        case sourceTimeText = "source_time_text"
+        case sourcePosition = "source_position"
         case updatedAt = "updated_at"
+    }
+
+    init(
+        sourceID: String,
+        eventAt: Date,
+        currency: String,
+        impact: Impact,
+        titleEN: String,
+        titleZH: String?,
+        actual: String?,
+        forecast: String?,
+        previous: String?,
+        updatedAt: Date,
+        sourceTimeText: String? = nil,
+        sourcePosition: Int = 0
+    ) {
+        self.sourceID = sourceID
+        self.eventAt = eventAt
+        self.currency = currency
+        self.impact = impact
+        self.titleEN = titleEN
+        self.titleZH = titleZH
+        self.actual = actual
+        self.forecast = forecast
+        self.previous = previous
+        self.sourceTimeText = sourceTimeText
+        self.sourcePosition = sourcePosition
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourceID = try container.decode(String.self, forKey: .sourceID)
+        eventAt = try container.decode(Date.self, forKey: .eventAt)
+        currency = try container.decode(String.self, forKey: .currency)
+        impact = try container.decode(Impact.self, forKey: .impact)
+        titleEN = try container.decode(String.self, forKey: .titleEN)
+        titleZH = try container.decodeIfPresent(String.self, forKey: .titleZH)
+        actual = try container.decodeIfPresent(String.self, forKey: .actual)
+        forecast = try container.decodeIfPresent(String.self, forKey: .forecast)
+        previous = try container.decodeIfPresent(String.self, forKey: .previous)
+        sourceTimeText = try container.decodeIfPresent(String.self, forKey: .sourceTimeText)
+        sourcePosition = try container.decodeIfPresent(Int.self, forKey: .sourcePosition) ?? 0
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 }
 

@@ -93,7 +93,7 @@ private struct CalendarEventRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Text(EditorialDateFormatter.calendarTime(event.eventAt))
+                Text(EditorialDateFormatter.calendarTime(event))
                     .font(EditorialTheme.metadata.monospacedDigit())
                 Text(event.currency)
                     .font(EditorialTheme.metadata.weight(.bold))

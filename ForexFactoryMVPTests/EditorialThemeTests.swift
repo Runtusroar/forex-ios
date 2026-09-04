@@ -29,6 +29,13 @@ final class EditorialThemeTests: XCTestCase {
         XCTAssertEqual(EditorialDateFormatter.calendarTime(date), "09:05")
     }
 
+    func testCalendarTimePreservesForexFactoryUntimedLabel() throws {
+        let json = #"{"source_id":"151045","event_at":"2026-09-08T16:00:00Z","currency":"USD","impact":"low","title_en":"ADP Weekly Employment Change","title_zh":null,"actual":null,"forecast":null,"previous":"11.8K","source_time_text":"Aug 23rd","source_position":9,"updated_at":"2026-09-04T15:30:00Z"}"#
+        let event = try JSONDecoder.api.decode(CalendarEvent.self, from: Data(json.utf8))
+
+        XCTAssertEqual(EditorialDateFormatter.calendarTime(event), "Aug 23rd")
+    }
+
     func testCalendarDayUsesUTCPlusEightAcrossTheUTCDateBoundary() throws {
         let date = try XCTUnwrap(
             ISO8601DateFormatter().date(from: "2026-09-03T17:05:00Z")

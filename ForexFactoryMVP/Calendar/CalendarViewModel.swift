@@ -69,7 +69,7 @@ final class CalendarViewModel {
             let start = calendar.startOfDay(for: current)
             let end = calendar.date(byAdding: .day, value: 8, to: start) ?? current
             let envelope = try await makeAPI().calendar(from: start, to: end)
-            events = envelope.items.sorted { $0.eventAt < $1.eventAt }
+            events = envelope.items.sorted(by: calendarEventPrecedes)
             staleSince = nil
             errorMessage = nil
             try await cache.save(envelope, as: .calendar)
@@ -84,11 +84,21 @@ final class CalendarViewModel {
         guard let envelope = try? await cache.load(.calendar, as: CalendarEnvelope.self) else {
             return
         }
-        events = envelope.items.sorted { $0.eventAt < $1.eventAt }
+        events = envelope.items.sorted(by: calendarEventPrecedes)
         staleSince = envelope.generatedAt
     }
 
     private func readableMessage(for error: Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? "Unable to load the calendar."
+    }
+
+    private func calendarEventPrecedes(_ lhs: CalendarEvent, _ rhs: CalendarEvent) -> Bool {
+        let lhsDay = EditorialDateFormatter.calendarDay(lhs.eventAt)
+        let rhsDay = EditorialDateFormatter.calendarDay(rhs.eventAt)
+        if lhsDay != rhsDay { return lhsDay < rhsDay }
+        if lhs.sourcePosition != rhs.sourcePosition {
+            return lhs.sourcePosition < rhs.sourcePosition
+        }
+        return lhs.eventAt < rhs.eventAt
     }
 }

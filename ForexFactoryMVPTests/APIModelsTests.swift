@@ -9,6 +9,16 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(event.titleEN, "ISM Manufacturing PMI")
         XCTAssertNil(event.titleZH)
         XCTAssertEqual(event.impact, .high)
+        XCTAssertNil(event.sourceTimeText)
+        XCTAssertEqual(event.sourcePosition, 0)
+    }
+
+    func testCalendarEventDecodesForexFactoryTimeLabelAndPosition() throws {
+        let json = #"{"source_id":"151045","event_at":"2026-09-08T16:00:00Z","currency":"USD","impact":"low","title_en":"ADP Weekly Employment Change","title_zh":null,"actual":null,"forecast":null,"previous":"11.8K","source_time_text":"Aug 23rd","source_position":9,"updated_at":"2026-09-04T15:30:00Z"}"#
+        let event = try JSONDecoder.api.decode(CalendarEvent.self, from: Data(json.utf8))
+
+        XCTAssertEqual(event.sourceTimeText, "Aug 23rd")
+        XCTAssertEqual(event.sourcePosition, 9)
     }
 
     func testNewsV2DetailDecodesOrderedBilingualSegmentsAndMedia() throws {
