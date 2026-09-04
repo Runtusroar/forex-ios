@@ -3,6 +3,11 @@ import XCTest
 @testable import ForexFactoryMVP
 
 private actor StubForexAPI: ForexAPI {
+    struct CalendarCall: Equatable, Sendable {
+        let start: Date
+        let end: Date
+    }
+
     struct ArticleCall: Equatable, Sendable {
         let section: NewsSectionID
         let impact: Impact?
@@ -15,6 +20,7 @@ private actor StubForexAPI: ForexAPI {
         items: [], nextCursor: nil, commentsComplete: false, generatedAt: Date(timeIntervalSince1970: 1)
     )
     private(set) var articleCalls: [ArticleCall] = []
+    private(set) var calendarCalls: [CalendarCall] = []
     private(set) var latestCommentCalls = 0
     private var shouldFail = false
 
@@ -39,10 +45,13 @@ private actor StubForexAPI: ForexAPI {
 
     func calls() -> [ArticleCall] { articleCalls }
 
+    func requestedCalendarRanges() -> [CalendarCall] { calendarCalls }
+
     func latestCommentCallCount() -> Int { latestCommentCalls }
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
+        calendarCalls.append(CalendarCall(start: start, end: end))
         return calendarEnvelope
     }
 
@@ -93,6 +102,28 @@ private actor StubForexAPI: ForexAPI {
 }
 
 final class ViewModelTests: XCTestCase {
+    @MainActor
+    func testCalendarRequestAlwaysUsesEightUTCPlusEightDays() async throws {
+        let api = StubForexAPI(
+            calendar: CalendarEnvelope(items: [], generatedAt: .distantPast)
+        )
+        let now = ISO8601DateFormatter().date(from: "2026-09-04T18:30:00Z")!
+        let expectedStart = ISO8601DateFormatter().date(from: "2026-09-04T16:00:00Z")!
+        let expectedEnd = ISO8601DateFormatter().date(from: "2026-09-12T16:00:00Z")!
+        let model = CalendarViewModel(
+            api: api,
+            cache: ResponseCache(directory: temporaryDirectory()),
+            now: { now }
+        )
+
+        await model.refresh()
+
+        let requestedRanges = await api.requestedCalendarRanges()
+        let call = try XCTUnwrap(requestedRanges.first)
+        XCTAssertEqual(call.start, expectedStart)
+        XCTAssertEqual(call.end, expectedEnd)
+    }
+
     @MainActor
     func testCalendarFailurePreservesLastGoodRows() async throws {
         let event = sampleEvent(id: "calendar-1")
