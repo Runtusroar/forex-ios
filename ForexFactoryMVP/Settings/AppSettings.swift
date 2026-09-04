@@ -80,7 +80,7 @@ final class AppSettings {
     init(defaults: UserDefaults = .standard, keyStore: any APIKeyStoring = KeychainAPIKeyStore()) {
         self.defaults = defaults
         self.keyStore = keyStore
-        baseURLText = defaults.string(forKey: Self.baseURLKey) ?? "https://zhenmei.shop"
+        baseURLText = defaults.string(forKey: Self.baseURLKey) ?? "https://api.juezhou.cc"
     }
 
     var hasStoredAPIKey: Bool {

@@ -3,6 +3,7 @@ import Foundation
 enum CacheKey: String, Sendable {
     case calendar
     case news
+    case contracts
 
     var fileName: String { "\(rawValue)-v1.json" }
 }

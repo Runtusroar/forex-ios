@@ -11,6 +11,16 @@ private final class MemoryKeyStore: APIKeyStoring, @unchecked Sendable {
 
 final class AppSettingsTests: XCTestCase {
     @MainActor
+    func testDefaultBaseURLUsesPublicTunnelHost() {
+        let settings = AppSettings(
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            keyStore: MemoryKeyStore()
+        )
+
+        XCTAssertEqual(settings.baseURLText, "https://api.juezhou.cc")
+    }
+
+    @MainActor
     func testHTTPSURLAndKeyAreSaved() throws {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
         let keys = MemoryKeyStore()

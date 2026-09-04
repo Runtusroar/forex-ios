@@ -9,7 +9,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("https://zhenmei.shop", text: $settings.baseURLText)
+                    TextField("https://api.juezhou.cc", text: $settings.baseURLText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)

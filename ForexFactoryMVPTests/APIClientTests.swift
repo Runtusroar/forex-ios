@@ -27,4 +27,16 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(components.path, "/api/v1/news")
         XCTAssertEqual(components.queryItems?.first?.value, "50")
     }
+
+    func testTopContractsLimitIsIncluded() throws {
+        let request = try APIRequestBuilder(
+            baseURL: XCTUnwrap(URL(string: "https://zhenmei.shop")),
+            apiKey: "secret"
+        ).topContracts(limit: 20)
+        let components = try XCTUnwrap(URLComponents(url: XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
+
+        XCTAssertEqual(components.path, "/api/v1/binance/futures/top-contracts")
+        XCTAssertEqual(components.queryItems?.first?.name, "limit")
+        XCTAssertEqual(components.queryItems?.first?.value, "20")
+    }
 }

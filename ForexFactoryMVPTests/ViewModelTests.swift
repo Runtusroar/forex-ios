@@ -5,11 +5,23 @@ import XCTest
 private actor StubForexAPI: ForexAPI {
     var calendarEnvelope: CalendarEnvelope
     var newsEnvelope: NewsEnvelope
+    var topContractsEnvelope: BinanceContractsEnvelope
     var shouldFail = false
 
     init(calendar: CalendarEnvelope, news: NewsEnvelope) {
         calendarEnvelope = calendar
         newsEnvelope = news
+        topContractsEnvelope = BinanceContractsEnvelope(items: [], generatedAt: Date(timeIntervalSince1970: 0))
+    }
+
+    init(
+        calendar: CalendarEnvelope,
+        news: NewsEnvelope,
+        topContracts: BinanceContractsEnvelope
+    ) {
+        calendarEnvelope = calendar
+        newsEnvelope = news
+        topContractsEnvelope = topContracts
     }
 
     func setShouldFail(_ value: Bool) { shouldFail = value }
@@ -22,6 +34,11 @@ private actor StubForexAPI: ForexAPI {
     func news(limit: Int) async throws -> NewsEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
         return newsEnvelope
+    }
+
+    func topContracts(limit: Int) async throws -> BinanceContractsEnvelope {
+        if shouldFail { throw URLError(.notConnectedToInternet) }
+        return topContractsEnvelope
     }
 
     func newsDetail(id: String) async throws -> NewsItem {
@@ -74,6 +91,26 @@ final class ViewModelTests: XCTestCase {
         XCTAssertEqual(cached?.items.count, 2)
     }
 
+    @MainActor
+    func testContractsRefreshSortsByQuoteVolumeAndCaches() async throws {
+        let small = sampleContract(symbol: "BTCUSDT", quoteVolume: 102_000_000)
+        let large = sampleContract(symbol: "ETHUSDT", quoteVolume: 197_500_000)
+        let generatedAt = Date(timeIntervalSince1970: 1_788_524_400)
+        let api = StubForexAPI(
+            calendar: CalendarEnvelope(items: [], generatedAt: generatedAt),
+            news: NewsEnvelope(items: [], generatedAt: generatedAt),
+            topContracts: BinanceContractsEnvelope(items: [small, large], generatedAt: generatedAt)
+        )
+        let cache = ResponseCache(directory: temporaryDirectory())
+        let model = ContractsViewModel(api: api, cache: cache)
+
+        await model.refresh()
+        let cached = try await cache.load(.contracts, as: BinanceContractsEnvelope.self)
+
+        XCTAssertEqual(model.contracts.map(\.symbol), ["ETHUSDT", "BTCUSDT"])
+        XCTAssertEqual(cached?.items.count, 2)
+    }
+
     private func temporaryDirectory() -> URL {
         FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString, directoryHint: .isDirectory)
@@ -109,6 +146,30 @@ final class ViewModelTests: XCTestCase {
             bodyZH: "中文正文",
             imageURL: nil,
             updatedAt: date
+        )
+    }
+
+    private func sampleContract(symbol: String, quoteVolume: Double) -> BinanceFuturesContract {
+        BinanceFuturesContract(
+            symbol: symbol,
+            pair: symbol,
+            contractType: "PERPETUAL",
+            status: "TRADING",
+            baseAsset: String(symbol.dropLast(4)),
+            quoteAsset: "USDT",
+            marginAsset: "USDT",
+            lastPrice: 102_000,
+            weightedAvgPrice: 101_000,
+            priceChange: 100,
+            priceChangePercent: 2.5,
+            highPrice: 110_000,
+            lowPrice: 95_000,
+            openPrice: 100_000,
+            volume: 1_000,
+            quoteVolume: quoteVolume,
+            count: 100,
+            volatilityPercent: 15.0,
+            updatedAt: Date(timeIntervalSince1970: 1_788_524_400)
         )
     }
 }
