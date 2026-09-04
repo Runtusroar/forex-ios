@@ -4,57 +4,68 @@ struct NewsArticleCard: View {
     let article: NewsArticleSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Text(article.sourceName ?? "Forex Factory")
-                    .font(.caption.weight(.semibold))
-                Spacer()
+                    .font(EditorialTheme.metadata.weight(.bold))
+                    .foregroundStyle(EditorialTheme.ink)
                 if let date = article.publishedAt {
+                    Text("|").foregroundStyle(EditorialTheme.rule)
                     Text(date, style: .relative)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(EditorialTheme.metadata)
+                        .foregroundStyle(EditorialTheme.mutedInk)
                 }
+                Spacer(minLength: 0)
             }
             BilingualText(
                 english: article.title.en ?? "Untitled",
-                chinese: article.title.zhHans
+                chinese: article.title.zhHans,
+                role: .sectionHeadline
             )
-            bilingualTeaser
             if let thumbnailURL = article.thumbnailURL {
                 AsyncImage(url: thumbnailURL) { phase in
                     switch phase {
-                    case let .success(image): image.resizable().scaledToFill()
-                    case .failure: Color.secondary.opacity(0.1).overlay { Image(systemName: "photo") }
-                    default: Color.secondary.opacity(0.1).overlay { ProgressView() }
+                    case let .success(image):
+                        image.resizable().scaledToFill()
+                    case .failure:
+                        EditorialTheme.subtleSurface.overlay { Image(systemName: "photo") }
+                    default:
+                        EditorialTheme.subtleSurface.overlay { ProgressView() }
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(maxWidth: .infinity, minHeight: 170, maxHeight: 170)
+                .clipped()
             }
-            HStack(spacing: 10) {
+            bilingualTeaser
+            HStack(spacing: 12) {
                 if let impact = article.breakingImpact { ImpactBadge(impact: impact) }
-                Label("\(article.commentCount)", systemImage: "text.bubble")
-                if article.isExcerpt { Label("Excerpt", systemImage: "doc.text") }
+                Text("COMMENTS \(article.commentCount)")
+                if article.isExcerpt { Text("EXCERPT") }
                 Spacer()
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(EditorialTheme.smallCaps)
+            .tracking(0.3)
+            .foregroundStyle(EditorialTheme.mutedInk)
+            EditorialRule()
         }
-        .padding(.vertical, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder
     private var bilingualTeaser: some View {
         if let english = article.teaser.en, !english.isEmpty {
             Text(english)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(.system(.subheadline, design: .serif))
+                .foregroundStyle(EditorialTheme.ink.opacity(0.86))
+                .lineSpacing(3)
                 .lineLimit(3)
         }
         if let chinese = article.teaser.zhHans, !chinese.isEmpty {
             Text(chinese)
                 .font(.footnote)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(EditorialTheme.mutedInk)
+                .lineSpacing(2)
                 .lineLimit(3)
         }
     }

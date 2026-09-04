@@ -58,9 +58,13 @@ struct NewsSegmentView: View {
         VStack(alignment: .leading, spacing: 10) {
             if let author = segment.authorName {
                 HStack {
-                    Text(author).font(.caption.weight(.semibold))
+                    Text(author.uppercased())
+                        .font(EditorialTheme.smallCaps)
+                        .tracking(0.5)
                     if let handle = segment.authorHandle {
-                        Text(handle).font(.caption).foregroundStyle(.secondary)
+                        Text(handle)
+                            .font(EditorialTheme.metadata)
+                            .foregroundStyle(EditorialTheme.mutedInk)
                     }
                 }
             }
@@ -82,18 +86,31 @@ struct NewsSegmentView: View {
                 Button(action.label) {
                     browserDestination = SafariDestination(url: action.url)
                 }
-                .font(.callout.weight(.semibold))
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.5)
+                .foregroundStyle(EditorialTheme.accent)
+                .underline()
+                .frame(minHeight: 44, alignment: .leading)
             } else if segment.links.isEmpty,
                       let sourceURL = segment.sourceURL {
-                Button("View source") {
+                Button("VIEW SOURCE") {
                     browserDestination = SafariDestination(url: sourceURL)
                 }
-                .font(.caption)
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.5)
+                .foregroundStyle(EditorialTheme.accent)
+                .underline()
+                .frame(minHeight: 44, alignment: .leading)
             }
         }
-        .padding(segment.type == .quote ? 12 : 0)
-        .background(segment.type == .quote ? Color.secondary.opacity(0.08) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.leading, segment.type == .quote || segment.type == .social ? 12 : 0)
+        .overlay(alignment: .leading) {
+            if segment.type == .quote || segment.type == .social {
+                Rectangle()
+                    .fill(EditorialTheme.accent)
+                    .frame(width: 3)
+            }
+        }
         .sheet(item: $browserDestination) { destination in
             InAppBrowserView(url: destination.url)
                 .ignoresSafeArea()
@@ -104,7 +121,9 @@ struct NewsSegmentView: View {
     private var bilingualText: some View {
         if let english = presentation.attributedEnglish {
             Text(english)
-                .font(.body)
+                .font(.system(.body, design: segment.type == .article ? .serif : .default))
+                .foregroundStyle(EditorialTheme.ink)
+                .lineSpacing(4)
                 .lineLimit(presentation.lineLimit)
                 .environment(\.openURL, OpenURLAction { url in
                     browserDestination = SafariDestination(url: url)
@@ -114,18 +133,21 @@ struct NewsSegmentView: View {
         if let chinese = segment.text.zhHans, !chinese.isEmpty {
             Text(chinese)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(EditorialTheme.mutedInk)
+                .lineSpacing(3)
                 .lineLimit(presentation.lineLimit)
         }
     }
 
     private var quoteText: some View {
         HStack(alignment: .top, spacing: 10) {
-            Rectangle().fill(Color.accentColor).frame(width: 3)
+            Rectangle().fill(EditorialTheme.accent).frame(width: 3)
             VStack(alignment: .leading, spacing: 7) {
                 if let english = presentation.attributedEnglish {
                     Text(english)
                         .italic()
+                        .foregroundStyle(EditorialTheme.ink)
+                        .lineSpacing(4)
                         .lineLimit(presentation.lineLimit)
                         .environment(\.openURL, OpenURLAction { url in
                             browserDestination = SafariDestination(url: url)
@@ -135,7 +157,8 @@ struct NewsSegmentView: View {
                 if let chinese = segment.text.zhHans, !chinese.isEmpty {
                     Text(chinese)
                         .italic()
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                        .lineSpacing(3)
                         .lineLimit(presentation.lineLimit)
                 }
             }

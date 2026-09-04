@@ -23,10 +23,15 @@ struct NewsMediaView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .background(Color.secondary.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .background(EditorialTheme.subtleSurface)
+            .overlay {
+                Rectangle()
+                    .stroke(EditorialTheme.rule.opacity(0.35), lineWidth: 0.5)
+            }
             if let caption = media.caption, !caption.isEmpty {
-                Text(caption).font(.caption).foregroundStyle(.secondary)
+                Text(caption.uppercased())
+                    .font(EditorialTheme.smallCaps)
+                    .foregroundStyle(EditorialTheme.mutedInk)
             }
         }
         .task(id: media.url) { await load() }

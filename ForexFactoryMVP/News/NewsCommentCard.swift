@@ -4,28 +4,31 @@ struct NewsCommentCard: View {
     let comment: NewsComment
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Label(comment.authorName, systemImage: "person.crop.circle")
-                    .font(.caption.weight(.semibold))
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(comment.authorName.uppercased())
+                    .font(EditorialTheme.smallCaps)
+                    .tracking(0.4)
                 Spacer()
                 if let date = comment.publishedAt {
                     Text(date, style: .relative)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(EditorialTheme.metadata)
+                        .foregroundStyle(EditorialTheme.mutedInk)
                 }
             }
             BilingualText(
                 english: comment.text.en ?? "Comment",
                 chinese: comment.text.zhHans,
+                role: .body,
                 englishFont: .body
             )
             if let reactions = comment.reactionCount, reactions > 0 {
-                Label("\(reactions)", systemImage: "hand.thumbsup")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("REACTIONS \(reactions)")
+                    .font(EditorialTheme.smallCaps)
+                    .foregroundStyle(EditorialTheme.mutedInk)
             }
+            EditorialRule()
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 }

@@ -5,12 +5,17 @@ struct NewsListView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                NewsSectionPicker(model: model)
-                ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
-                content
+            ZStack {
+                EditorialTheme.paper.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
+                    content
+                }
             }
-            .navigationTitle("News")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { toolbarContent }
         }
     }
@@ -18,13 +23,23 @@ struct NewsListView: View {
     @ViewBuilder
     private var content: some View {
         if isEmpty, !model.isRefreshing {
-            ContentUnavailableView(
-                model.selectedSection == .latestComments ? "No comments" : "No news",
-                systemImage: model.selectedSection == .latestComments ? "text.bubble" : "newspaper",
-                description: Text("Pull to refresh or check the server details in Settings.")
-            )
+            ScrollView {
+                newspaperHeader
+                ContentUnavailableView(
+                    model.selectedSection == .latestComments ? "No comments" : "No news",
+                    systemImage: model.selectedSection == .latestComments ? "text.bubble" : "newspaper",
+                    description: Text("Pull to refresh or check the server details in Settings.")
+                )
+                .foregroundStyle(EditorialTheme.ink)
+                .padding(.top, 40)
+            }
+            .refreshable { await model.refresh() }
         } else {
             List {
+                newspaperHeader
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(EditorialTheme.paper)
                 if model.selectedSection == .latestComments {
                     ForEach(model.currentComments) { comment in
                         NavigationLink {
@@ -32,6 +47,8 @@ struct NewsListView: View {
                         } label: {
                             NewsCommentCard(comment: comment)
                         }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(EditorialTheme.paper)
                     }
                 } else {
                     ForEach(model.currentArticles) { article in
@@ -40,6 +57,8 @@ struct NewsListView: View {
                         } label: {
                             NewsArticleCard(article: article)
                         }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(EditorialTheme.paper)
                     }
                 }
                 if model.canLoadMore {
@@ -49,14 +68,27 @@ struct NewsListView: View {
                         Spacer()
                     }
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(EditorialTheme.mutedInk)
                     .listRowSeparator(.hidden)
+                    .listRowBackground(EditorialTheme.paper)
                     .task { await model.loadMore() }
                 }
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(EditorialTheme.paper)
             .refreshable { await model.refresh() }
         }
+    }
+
+    private var newspaperHeader: some View {
+        VStack(spacing: 10) {
+            EditorialMasthead(section: "News")
+                .padding(.horizontal)
+                .padding(.top, 8)
+            NewsSectionPicker(model: model)
+        }
+        .background(EditorialTheme.paper)
     }
 
     private var isEmpty: Bool {

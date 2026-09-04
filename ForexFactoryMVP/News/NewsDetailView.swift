@@ -11,38 +11,56 @@ struct NewsDetailView: View {
     @State private var isLoading = false
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 18) {
-                header
-                if let detail {
-                    ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
-                        NewsSegmentView(segment: segment, model: model)
+        ZStack {
+            EditorialTheme.paper.ignoresSafeArea()
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 20) {
+                    header
+                    if let detail {
+                        ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
+                            NewsSegmentView(segment: segment, model: model)
+                        }
+                        if !comments.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                EditorialRule(weight: .double)
+                                Text("COMMENTS")
+                                    .font(EditorialTheme.smallCaps)
+                                    .tracking(1.2)
+                            }
+                            ForEach(comments) { NewsCommentCard(comment: $0) }
+                        }
+                        Link("OPEN ORIGINAL ON FOREX FACTORY", destination: detail.ffURL)
+                            .font(EditorialTheme.smallCaps)
+                            .tracking(0.5)
+                            .foregroundStyle(EditorialTheme.accent)
+                            .underline()
                     }
-                    if !comments.isEmpty {
-                        Divider()
-                        Text("Comments")
-                            .font(.title3.bold())
-                        ForEach(comments) { NewsCommentCard(comment: $0) }
+                    if isLoading {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text("LOADING FOREX FACTORY DETAIL…")
+                                .font(EditorialTheme.smallCaps)
+                        }
                     }
-                    Link("Open original on Forex Factory", destination: detail.ffURL)
-                        .font(.footnote.weight(.semibold))
+                    if let errorMessage {
+                        ContentUnavailableView {
+                            Label("Unable to load detail", systemImage: "wifi.exclamationmark")
+                        } description: {
+                            Text(errorMessage)
+                        } actions: {
+                            Button("Retry") { Task { await load() } }
+                        }
+                    }
                 }
-                if isLoading { ProgressView("Loading Forex Factory detail…") }
-                if let errorMessage {
-                    ContentUnavailableView {
-                        Label("Unable to load detail", systemImage: "wifi.exclamationmark")
-                    } description: {
-                        Text(errorMessage)
-                    } actions: {
-                        Button("Retry") { Task { await load() } }
-                    }
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 30)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
         }
-        .navigationTitle("News Detail")
+        .navigationTitle("ARTICLE")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task(id: articleID) { await load() }
     }
 
@@ -51,22 +69,37 @@ struct NewsDetailView: View {
         let source = detail?.sourceName ?? summary?.sourceName ?? "Forex Factory"
         let title = detail?.title ?? summary?.title
         let teaser = detail?.teaser ?? summary?.teaser
-        Text(source)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+        HStack(alignment: .firstTextBaseline) {
+            Text(source.uppercased())
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.6)
+            Spacer()
+            if let date = detail?.publishedAt ?? summary?.publishedAt {
+                Text(date.formatted(date: .abbreviated, time: .shortened).uppercased())
+                    .font(EditorialTheme.smallCaps)
+                    .foregroundStyle(EditorialTheme.accent)
+            }
+        }
+        .padding(.top, 12)
         BilingualText(
             english: title?.en ?? "Loading…",
             chinese: title?.zhHans,
+            role: .headline,
             englishFont: .title2.bold()
         )
         if detail == nil || detail?.segments.isEmpty == true {
             if let english = teaser?.en, !english.isEmpty {
-                Text(english).font(.subheadline).foregroundStyle(.secondary)
+                Text(english)
+                    .font(.system(.subheadline, design: .serif))
+                    .foregroundStyle(EditorialTheme.ink.opacity(0.86))
             }
             if let chinese = teaser?.zhHans, !chinese.isEmpty {
-                Text(chinese).font(.footnote).foregroundStyle(.tertiary)
+                Text(chinese)
+                    .font(.footnote)
+                    .foregroundStyle(EditorialTheme.mutedInk)
             }
         }
+        EditorialRule(weight: .strong)
     }
 
     private func load() async {
