@@ -5,33 +5,67 @@ struct ContractsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
-                if model.contracts.isEmpty, !model.isRefreshing {
-                    ContentUnavailableView(
-                        "No contracts",
-                        systemImage: "chart.line.uptrend.xyaxis",
-                        description: Text("Add your server details in Settings, then pull to refresh.")
-                    )
-                } else {
-                    List {
-                        Section("Top 20 USDT Perpetuals") {
-                            ForEach(Array(model.contracts.enumerated()), id: \.element.id) { index, contract in
-                                ContractRow(rank: index + 1, contract: contract)
-                            }
-                        }
-                    }
-                    .listStyle(.insetGrouped)
-                    .refreshable { await model.refresh() }
+            ZStack {
+                EditorialTheme.paper.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
+                    content
                 }
             }
-            .navigationTitle("Contracts")
-            .toolbar {
-                if model.isRefreshing {
-                    ToolbarItem(placement: .topBarTrailing) { ProgressView() }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if model.contracts.isEmpty, !model.isRefreshing {
+            ScrollView {
+                contractsHeader
+                EmptyContractsView()
+                    .padding(.top, 44)
+                    .padding(.horizontal, 28)
+            }
+            .background(EditorialTheme.paper)
+            .refreshable { await model.refresh() }
+        } else {
+            List {
+                contractsHeader
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(EditorialTheme.paper)
+
+                ForEach(Array(model.contracts.enumerated()), id: \.element.id) { index, contract in
+                    ContractRow(rank: index + 1, contract: contract)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(EditorialTheme.paper)
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(EditorialTheme.paper)
+            .refreshable { await model.refresh() }
+        }
+    }
+
+    private var contractsHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            EditorialMasthead(section: "Contracts")
+            HStack(alignment: .firstTextBaseline) {
+                Text("BINANCE FUTURES · TOP 20 USDT PERPETUALS")
+                    .font(EditorialTheme.smallCaps)
+                    .tracking(0.8)
+                    .foregroundStyle(EditorialTheme.accent)
+                Spacer()
+                if model.isRefreshing {
+                    ProgressView()
+                }
+            }
+            EditorialRule(weight: .strong)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(EditorialTheme.paper)
     }
 }
 
@@ -43,20 +77,22 @@ private struct ContractRow: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("#\(rank)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(EditorialTheme.smallCaps.monospacedDigit())
+                    .tracking(0.5)
+                    .foregroundStyle(EditorialTheme.accent)
                     .frame(width: 34, alignment: .leading)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contract.symbol)
-                        .font(.headline.weight(.semibold))
-                    Text("\(contract.contractType) · \(contract.status)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(EditorialTheme.headline(.headline, weight: .semibold))
+                    Text("\(contract.contractType) / \(contract.status)")
+                        .font(EditorialTheme.metadata)
+                        .foregroundStyle(EditorialTheme.mutedInk)
                 }
                 Spacer(minLength: 12)
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(contract.lastPrice, format: .number.precision(.significantDigits(2...8)))
-                        .font(.headline.monospacedDigit())
+                        .font(.headline.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(EditorialTheme.ink)
                     PercentText(value: contract.priceChangePercent)
                 }
             }
@@ -70,8 +106,10 @@ private struct ContractRow: View {
                 MetricCell(label: "Low", value: price(contract.lowPrice))
                 MetricCell(label: "Trades", value: abbreviated(Double(contract.count)))
             }
+            EditorialRule()
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
         .accessibilityElement(children: .combine)
     }
 
@@ -95,7 +133,7 @@ private struct PercentText: View {
     var body: some View {
         Text("\(value.formatted(.number.precision(.fractionLength(2))))%")
             .font(.caption.monospacedDigit().weight(.semibold))
-            .foregroundStyle(value >= 0 ? .green : .red)
+            .foregroundStyle(value >= 0 ? Color(red: 0.08, green: 0.36, blue: 0.27) : EditorialTheme.accent)
     }
 }
 
@@ -106,12 +144,41 @@ private struct MetricCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.5)
+                .foregroundStyle(EditorialTheme.mutedInk)
             Text(value)
                 .font(.caption.monospacedDigit().weight(.medium))
+                .foregroundStyle(EditorialTheme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct EmptyContractsView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(EditorialTheme.accent)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("NO CONTRACTS")
+                        .font(EditorialTheme.smallCaps)
+                        .tracking(1.1)
+                        .foregroundStyle(EditorialTheme.accent)
+                    Text("Market board unavailable")
+                        .font(EditorialTheme.headline(.title2))
+                        .foregroundStyle(EditorialTheme.ink)
+                }
+            }
+            EditorialRule(weight: .strong)
+            Text("Pull to refresh, or check the API URL and key in Settings.")
+                .font(.subheadline)
+                .foregroundStyle(EditorialTheme.mutedInk)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
