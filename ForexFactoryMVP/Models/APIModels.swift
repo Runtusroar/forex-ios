@@ -495,10 +495,27 @@ struct ListEnvelope<Item: Codable & Sendable>: Codable, Sendable {
 typealias CalendarEnvelope = ListEnvelope<CalendarEvent>
 typealias BinanceContractsEnvelope = ListEnvelope<BinanceFuturesContract>
 
+enum ContractMarketFilter: String, CaseIterable, Identifiable, Codable, Sendable {
+    case all
+    case crypto
+    case traditional
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "All"
+        case .crypto: "Crypto"
+        case .traditional: "Traditional"
+        }
+    }
+}
+
 struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
     let symbol: String
     let pair: String
     let contractType: String
+    let marketType: String
     let status: String
     let baseAsset: String
     let quoteAsset: String
@@ -521,6 +538,7 @@ struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case symbol, pair, status, count
         case contractType = "contract_type"
+        case marketType = "market_type"
         case baseAsset = "base_asset"
         case quoteAsset = "quote_asset"
         case marginAsset = "margin_asset"

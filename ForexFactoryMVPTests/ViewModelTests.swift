@@ -15,13 +15,14 @@ private actor StubForexAPI: ForexAPI {
     }
 
     private var calendarEnvelope: CalendarEnvelope
-    private var topContractsEnvelope: BinanceContractsEnvelope
+    private var topContractsEnvelopes: [ContractMarketFilter: BinanceContractsEnvelope]
     private var articlePages: [String: NewsArticlesEnvelope] = [:]
     private var commentsEnvelope = NewsCommentsEnvelope(
         items: [], nextCursor: nil, commentsComplete: false, generatedAt: Date(timeIntervalSince1970: 1)
     )
     private(set) var articleCalls: [ArticleCall] = []
     private(set) var calendarCalls: [CalendarCall] = []
+    private(set) var contractCalls: [ContractMarketFilter] = []
     private(set) var latestCommentCalls = 0
     private var shouldFail = false
 
@@ -32,10 +33,17 @@ private actor StubForexAPI: ForexAPI {
         )
     ) {
         calendarEnvelope = calendar
-        topContractsEnvelope = topContracts
+        topContractsEnvelopes = [.all: topContracts]
     }
 
     func setShouldFail(_ value: Bool) { shouldFail = value }
+
+    func setTopContracts(
+        _ envelope: BinanceContractsEnvelope,
+        for marketType: ContractMarketFilter
+    ) {
+        topContractsEnvelopes[marketType] = envelope
+    }
 
     func setArticlePage(
         section: NewsSectionID,
@@ -55,6 +63,8 @@ private actor StubForexAPI: ForexAPI {
     func requestedCalendarRanges() -> [CalendarCall] { calendarCalls }
 
     func latestCommentCallCount() -> Int { latestCommentCalls }
+
+    func requestedContractMarkets() -> [ContractMarketFilter] { contractCalls }
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
@@ -99,9 +109,11 @@ private actor StubForexAPI: ForexAPI {
 
     func mediaData(path: String) async throws -> Data { Data() }
 
-    func topContracts(limit: Int) async throws -> BinanceContractsEnvelope {
+    func topContracts(limit: Int, marketType: ContractMarketFilter) async throws -> BinanceContractsEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
-        return topContractsEnvelope
+        contractCalls.append(marketType)
+        return topContractsEnvelopes[marketType]
+            ?? BinanceContractsEnvelope(items: [], generatedAt: Date(timeIntervalSince1970: 0))
     }
 
     func status() async throws -> ServiceStatus {
@@ -194,10 +206,49 @@ final class ViewModelTests: XCTestCase {
         let model = ContractsViewModel(api: api, cache: cache)
 
         await model.refresh()
-        let cached = try await cache.load(.contracts, as: BinanceContractsEnvelope.self)
+        let cached = try await cache.load(
+            .contracts(marketType: .all),
+            as: BinanceContractsEnvelope.self
+        )
 
         XCTAssertEqual(model.contracts.map(\.symbol), ["ETHUSDT", "BTCUSDT"])
+        XCTAssertEqual(model.lastUpdatedAt, generatedAt)
         XCTAssertEqual(cached?.items.count, 2)
+        let requestedMarkets = await api.requestedContractMarkets()
+        XCTAssertEqual(requestedMarkets, [.all])
+    }
+
+    @MainActor
+    func testContractsMarketSelectionRequestsSeparateMarketTypeAndCachesEmptyTraditional() async throws {
+        let all = BinanceContractsEnvelope(
+            items: [sampleContract(symbol: "BTCUSDT", quoteVolume: 102_000_000)],
+            generatedAt: Date(timeIntervalSince1970: 1_788_524_400)
+        )
+        let traditional = BinanceContractsEnvelope(
+            items: [],
+            generatedAt: Date(timeIntervalSince1970: 1_788_524_500)
+        )
+        let api = StubForexAPI(
+            calendar: CalendarEnvelope(items: [], generatedAt: all.generatedAt),
+            topContracts: all
+        )
+        await api.setTopContracts(traditional, for: .traditional)
+        let cache = ResponseCache(directory: temporaryDirectory())
+        let model = ContractsViewModel(api: api, cache: cache)
+
+        await model.refresh()
+        await model.select(.traditional)
+        let cached = try await cache.load(
+            .contracts(marketType: .traditional),
+            as: BinanceContractsEnvelope.self
+        )
+
+        XCTAssertEqual(model.selectedMarket, .traditional)
+        XCTAssertTrue(model.contracts.isEmpty)
+        XCTAssertEqual(model.lastUpdatedAt, traditional.generatedAt)
+        XCTAssertEqual(cached?.generatedAt, traditional.generatedAt)
+        let requestedMarkets = await api.requestedContractMarkets()
+        XCTAssertEqual(requestedMarkets, [.all, .traditional])
     }
 
     @MainActor
@@ -351,6 +402,7 @@ private func sampleContract(symbol: String, quoteVolume: Double) -> BinanceFutur
         symbol: symbol,
         pair: symbol,
         contractType: "PERPETUAL",
+        marketType: "crypto",
         status: "TRADING",
         baseAsset: String(symbol.dropLast(4)),
         quoteAsset: "USDT",

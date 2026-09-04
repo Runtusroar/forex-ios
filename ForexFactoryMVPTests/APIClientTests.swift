@@ -32,16 +32,18 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
     }
 
-    func testTopContractsLimitIsIncluded() throws {
+    func testTopContractsIncludesMarketTypeFilter() throws {
         let request = try APIRequestBuilder(
             baseURL: XCTUnwrap(URL(string: "https://api.juezhou.cc")),
             apiKey: "secret"
-        ).topContracts(limit: 20)
+        ).topContracts(limit: 20, marketType: .traditional)
         let components = try XCTUnwrap(URLComponents(url: XCTUnwrap(request.url), resolvingAgainstBaseURL: false))
 
         XCTAssertEqual(components.path, "/api/v1/binance/futures/top-contracts")
-        XCTAssertEqual(components.queryItems?.first?.name, "limit")
-        XCTAssertEqual(components.queryItems?.first?.value, "20")
+        XCTAssertEqual(
+            Dictionary(uniqueKeysWithValues: components.queryItems?.map { ($0.name, $0.value ?? "") } ?? []),
+            ["limit": "20", "market_type": "traditional"]
+        )
     }
 
     func testProtectedMediaAcceptsOnlyBackendRelativePath() throws {

@@ -72,4 +72,32 @@ final class ResponseCacheTests: XCTestCase {
         XCTAssertEqual(loadedAll?.nextCursor, "all-cursor")
         XCTAssertEqual(loadedHigh?.nextCursor, "high-cursor")
     }
+
+    func testContractMarketCachesDoNotOverwriteEachOther() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        let cache = ResponseCache(directory: directory)
+        let all = BinanceContractsEnvelope(
+            items: [],
+            generatedAt: Date(timeIntervalSince1970: 100)
+        )
+        let traditional = BinanceContractsEnvelope(
+            items: [],
+            generatedAt: Date(timeIntervalSince1970: 200)
+        )
+
+        try await cache.save(all, as: .contracts(marketType: .all))
+        try await cache.save(traditional, as: .contracts(marketType: .traditional))
+
+        let loadedAll = try await cache.load(
+            .contracts(marketType: .all),
+            as: BinanceContractsEnvelope.self
+        )
+        let loadedTraditional = try await cache.load(
+            .contracts(marketType: .traditional),
+            as: BinanceContractsEnvelope.self
+        )
+        XCTAssertEqual(loadedAll?.generatedAt, all.generatedAt)
+        XCTAssertEqual(loadedTraditional?.generatedAt, traditional.generatedAt)
+    }
 }

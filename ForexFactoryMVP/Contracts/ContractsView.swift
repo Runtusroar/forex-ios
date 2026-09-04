@@ -18,10 +18,10 @@ struct ContractsView: View {
 
     @ViewBuilder
     private var content: some View {
-        if model.contracts.isEmpty, !model.isRefreshing {
+        if model.contracts.isEmpty {
             ScrollView {
                 contractsHeader
-                EmptyContractsView()
+                EmptyContractsView(marketType: model.selectedMarket)
                     .padding(.top, 44)
                     .padding(.horizontal, 28)
             }
@@ -50,21 +50,76 @@ struct ContractsView: View {
     private var contractsHeader: some View {
         VStack(alignment: .leading, spacing: 10) {
             EditorialMasthead(section: "Contracts")
-            HStack(alignment: .firstTextBaseline) {
-                Text("BINANCE FUTURES · TOP 20 USDT PERPETUALS")
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(updatedLabel(model.lastUpdatedAt))
                     .font(EditorialTheme.smallCaps)
                     .tracking(0.8)
                     .foregroundStyle(EditorialTheme.accent)
                 Spacer()
-                if model.isRefreshing {
-                    ProgressView()
-                }
+                Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
+                    .font(EditorialTheme.smallCaps)
+                    .tracking(0.8)
+                    .foregroundStyle(EditorialTheme.accent)
             }
+            Text("BINANCE FUTURES · TOP 20 BY 24H TURNOVER")
+                .font(EditorialTheme.smallCaps)
+                .tracking(0.8)
+                .foregroundStyle(EditorialTheme.mutedInk)
+            ContractMarketPicker(model: model)
+                .padding(.top, 4)
             EditorialRule(weight: .strong)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 10)
+        .background(EditorialTheme.paper)
+    }
+
+    private func updatedLabel(_ date: Date?) -> String {
+        guard let date else { return "UPDATED · --:--:--" }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)
+        formatter.dateFormat = "HH:mm:ss"
+        return "UPDATED · \(formatter.string(from: date))"
+    }
+}
+
+private struct ContractMarketPicker: View {
+    @Bindable var model: ContractsViewModel
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .bottom, spacing: 28) {
+                ForEach(ContractMarketFilter.allCases) { marketType in
+                    Button {
+                        Task { await model.select(marketType) }
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(marketType.title)
+                                .font(.system(.subheadline, design: .default, weight: .semibold))
+                            Rectangle()
+                                .fill(
+                                    model.selectedMarket == marketType
+                                        ? EditorialTheme.accent
+                                        : Color.clear
+                                )
+                                .frame(height: 3)
+                        }
+                        .foregroundStyle(
+                            model.selectedMarket == marketType
+                                ? EditorialTheme.accent
+                                : EditorialTheme.ink
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minHeight: 38)
+                    .accessibilityValue(model.selectedMarket == marketType ? "Selected" : "")
+                }
+            }
+        }
         .background(EditorialTheme.paper)
     }
 }
@@ -84,7 +139,7 @@ private struct ContractRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contract.symbol)
                         .font(EditorialTheme.headline(.headline, weight: .semibold))
-                    Text("\(contract.contractType) / \(contract.status)")
+                    Text("\(contract.marketType.uppercased()) / BINANCE USD-M \(contract.contractType) / \(contract.status)")
                         .font(EditorialTheme.metadata)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }
@@ -158,6 +213,8 @@ private struct MetricCell: View {
 }
 
 private struct EmptyContractsView: View {
+    let marketType: ContractMarketFilter
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 12) {
@@ -169,17 +226,34 @@ private struct EmptyContractsView: View {
                         .font(EditorialTheme.smallCaps)
                         .tracking(1.1)
                         .foregroundStyle(EditorialTheme.accent)
-                    Text("Market board unavailable")
+                    Text(title)
                         .font(EditorialTheme.headline(.title2))
                         .foregroundStyle(EditorialTheme.ink)
                 }
             }
             EditorialRule(weight: .strong)
-            Text("Pull to refresh, or check the API URL and key in Settings.")
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(EditorialTheme.mutedInk)
                 .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var title: String {
+        switch marketType {
+        case .traditional: "No traditional contracts"
+        case .crypto: "Crypto market board unavailable"
+        case .all: "Market board unavailable"
+        }
+    }
+
+    private var message: String {
+        switch marketType {
+        case .traditional:
+            "The current Binance futures source only returns crypto derivatives. Traditional contracts will appear here after a traditional-market source is connected."
+        case .crypto, .all:
+            "Pull to refresh, or check the API URL and key in Settings."
+        }
     }
 }

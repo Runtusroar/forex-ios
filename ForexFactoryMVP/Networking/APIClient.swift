@@ -13,7 +13,7 @@ protocol ForexAPI: Sendable {
     func latestComments(limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope
     func articleComments(id: String, limit: Int, cursor: String?) async throws -> NewsCommentsEnvelope
     func mediaData(path: String) async throws -> Data
-    func topContracts(limit: Int) async throws -> BinanceContractsEnvelope
+    func topContracts(limit: Int, marketType: ContractMarketFilter) async throws -> BinanceContractsEnvelope
     func status() async throws -> ServiceStatus
 }
 
@@ -47,7 +47,7 @@ extension ForexAPI {
 
     func mediaData(path: String) async throws -> Data { throw APIError.invalidConfiguration }
 
-    func topContracts(limit: Int) async throws -> BinanceContractsEnvelope {
+    func topContracts(limit: Int, marketType: ContractMarketFilter) async throws -> BinanceContractsEnvelope {
         throw APIError.invalidConfiguration
     }
 }
@@ -131,10 +131,13 @@ struct APIRequestBuilder: Sendable {
         return try request(path: path)
     }
 
-    func topContracts(limit: Int) throws -> URLRequest {
+    func topContracts(limit: Int, marketType: ContractMarketFilter) throws -> URLRequest {
         try request(
             path: "/api/v1/binance/futures/top-contracts",
-            queryItems: [URLQueryItem(name: "limit", value: String(limit))]
+            queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "market_type", value: marketType.rawValue),
+            ]
         )
     }
 
@@ -224,8 +227,11 @@ actor APIClient: ForexAPI {
         return data
     }
 
-    func topContracts(limit: Int = 20) async throws -> BinanceContractsEnvelope {
-        try await send(builder.topContracts(limit: limit))
+    func topContracts(
+        limit: Int = 20,
+        marketType: ContractMarketFilter = .all
+    ) async throws -> BinanceContractsEnvelope {
+        try await send(builder.topContracts(limit: limit, marketType: marketType))
     }
 
     func status() async throws -> ServiceStatus {

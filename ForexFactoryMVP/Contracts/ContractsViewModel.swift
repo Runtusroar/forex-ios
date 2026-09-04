@@ -8,11 +8,14 @@ final class ContractsViewModel {
     private let cache: ResponseCache
     private let refreshLoop: RefreshLoop
     private var activationTask: Task<Void, Never>?
+    private var refreshingMarkets: Set<ContractMarketFilter> = []
 
     var contracts: [BinanceFuturesContract] = []
-    var isRefreshing = false
+    var selectedMarket: ContractMarketFilter = .all
+    var lastUpdatedAt: Date?
     var staleSince: Date?
     var errorMessage: String?
+    var isRefreshing: Bool { refreshingMarkets.contains(selectedMarket) }
 
     init(
         api: any ForexAPI,
@@ -54,27 +57,49 @@ final class ContractsViewModel {
     }
 
     func refresh() async {
-        guard !isRefreshing else { return }
-        isRefreshing = true
-        defer { isRefreshing = false }
+        let marketType = selectedMarket
+        guard !refreshingMarkets.contains(marketType) else { return }
+        refreshingMarkets.insert(marketType)
+        defer { refreshingMarkets.remove(marketType) }
         do {
-            let envelope = try await makeAPI().topContracts(limit: 20)
+            let envelope = try await makeAPI().topContracts(limit: 20, marketType: marketType)
+            guard selectedMarket == marketType else { return }
             contracts = Self.sorted(envelope.items)
+            lastUpdatedAt = envelope.generatedAt
             staleSince = nil
             errorMessage = nil
-            try await cache.save(envelope, as: .contracts)
+            try await cache.save(envelope, as: .contracts(marketType: marketType))
         } catch {
+            guard selectedMarket == marketType else { return }
             errorMessage = contracts.isEmpty
                 ? readableMessage(for: error)
                 : "Unable to refresh. Showing saved data."
         }
     }
 
+    func select(_ marketType: ContractMarketFilter) async {
+        guard selectedMarket != marketType else {
+            if contracts.isEmpty { await refresh() }
+            return
+        }
+        selectedMarket = marketType
+        contracts = []
+        lastUpdatedAt = nil
+        staleSince = nil
+        errorMessage = nil
+        await loadCachedData()
+        await refresh()
+    }
+
     func loadCachedData() async {
-        guard let envelope = try? await cache.load(.contracts, as: BinanceContractsEnvelope.self) else {
+        guard let envelope = try? await cache.load(
+            .contracts(marketType: selectedMarket),
+            as: BinanceContractsEnvelope.self
+        ) else {
             return
         }
         contracts = Self.sorted(envelope.items)
+        lastUpdatedAt = envelope.generatedAt
         staleSince = envelope.generatedAt
     }
 
