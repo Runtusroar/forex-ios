@@ -3,9 +3,10 @@ import SwiftUI
 struct NewsListView: View {
     @Bindable var model: NewsViewModel
     @State private var isImpactFilterPresented = false
+    @State private var path: [NewsRoute] = []
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 EditorialTheme.paper.ignoresSafeArea()
                 VStack(spacing: 0) {
@@ -17,6 +18,18 @@ struct NewsListView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: NewsRoute.self) { route in
+                switch route {
+                case .article(let sourceID):
+                    NewsDetailView(
+                        articleID: sourceID,
+                        summary: model.currentArticles.first { $0.sourceID == sourceID },
+                        model: model
+                    )
+                case .comment(let articleID):
+                    NewsDetailView(articleID: articleID, summary: nil, model: model)
+                }
+            }
         }
     }
 
@@ -42,21 +55,25 @@ struct NewsListView: View {
                     .listRowBackground(EditorialTheme.paper)
                 if model.selectedSection == .latestComments {
                     ForEach(model.currentComments) { comment in
-                        NavigationLink {
-                            NewsDetailView(articleID: comment.articleID, summary: nil, model: model)
+                        Button {
+                            path.append(.comment(articleID: comment.articleID))
                         } label: {
                             NewsCommentCard(comment: comment)
+                                .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
                         .listRowBackground(EditorialTheme.paper)
                     }
                 } else {
                     ForEach(model.currentArticles) { article in
-                        NavigationLink {
-                            NewsDetailView(articleID: article.sourceID, summary: article, model: model)
+                        Button {
+                            path.append(.article(sourceID: article.sourceID))
                         } label: {
                             NewsArticleCard(article: article)
+                                .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
                         .listRowBackground(EditorialTheme.paper)
                     }
@@ -170,6 +187,11 @@ struct NewsListView: View {
         default: "All"
         }
     }
+}
+
+private enum NewsRoute: Hashable {
+    case article(sourceID: String)
+    case comment(articleID: String)
 }
 
 enum NewsImpactFilterOption: String, CaseIterable, Identifiable {

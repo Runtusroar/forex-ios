@@ -620,7 +620,7 @@ enum ContractMarketFilter: String, CaseIterable, Identifiable, Codable, Sendable
         switch self {
         case .all: "All"
         case .crypto: "Crypto"
-        case .traditional: "Traditional"
+        case .traditional: "TradFi"
         }
     }
 }
@@ -650,6 +650,17 @@ struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
     let updatedAt: Date
 
     var id: String { symbol }
+
+    var marketDisplayLabel: String {
+        guard marketType.lowercased() != "crypto" else { return "Crypto" }
+
+        let marketName =
+            marketType.lowercased() == "traditional"
+            ? "TradFi"
+            : marketType.uppercased()
+        guard !underlyingType.isEmpty else { return marketName }
+        return "\(marketName) · \(underlyingType.uppercased())"
+    }
 
     enum CodingKeys: String, CodingKey {
         case symbol, pair, status, count

@@ -163,6 +163,18 @@ final class APIModelsTests: XCTestCase {
         XCTAssertEqual(contract.quoteVolume, 102_000_000)
         XCTAssertEqual(contract.volatilityPercent, 15.0)
     }
+
+    func testContractMarketLabelsUseBinanceTradFiNaming() throws {
+        let json =
+            #"{"symbol":"XAUUSDT","pair":"XAUUSDT","contract_type":"TRADIFI_PERPETUAL","market_type":"traditional","underlying_type":"COMMODITY","underlying_subtypes":["TradFi"],"status":"TRADING","base_asset":"XAU","quote_asset":"USDT","margin_asset":"USDT","last_price":3650.0,"weighted_avg_price":3600.0,"price_change":50.0,"price_change_percent":1.4,"high_price":3700.0,"low_price":3500.0,"open_price":3600.0,"volume":1000.0,"quote_volume":3650000.0,"count":100,"volatility_percent":5.5,"updated_at":"2026-09-04T12:20:00Z"}"#
+        let contract = try JSONDecoder.api.decode(
+            BinanceFuturesContract.self, from: Data(json.utf8))
+
+        XCTAssertEqual(ContractMarketFilter.traditional.title, "TradFi")
+        XCTAssertEqual(contract.marketDisplayLabel, "TradFi · COMMODITY")
+        XCTAssertFalse(contract.marketDisplayLabel.contains("TRADIFI_PERPETUAL"))
+        XCTAssertFalse(contract.marketDisplayLabel.contains("TRADING"))
+    }
 }
 
 private func sampleNewsArticleSummary(thumbnailURL: URL?) -> NewsArticleSummary {

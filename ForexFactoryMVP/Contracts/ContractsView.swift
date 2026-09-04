@@ -139,9 +139,7 @@ private struct ContractRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contract.symbol)
                         .font(EditorialTheme.headline(.headline, weight: .semibold))
-                    Text(contractTypeLine)
-                        .font(EditorialTheme.metadata)
-                        .foregroundStyle(EditorialTheme.mutedInk)
+                    ContractMarketTag(text: contract.marketDisplayLabel)
                 }
                 Spacer(minLength: 12)
                 VStack(alignment: .trailing, spacing: 2) {
@@ -180,12 +178,19 @@ private struct ContractRow: View {
     private func abbreviated(_ value: Double) -> String {
         value.formatted(.number.notation(.compactName).precision(.fractionLength(1)))
     }
+}
 
-    private var contractTypeLine: String {
-        let category = contract.underlyingType.isEmpty
-            ? contract.marketType.uppercased()
-            : "\(contract.marketType.uppercased()) / \(contract.underlyingType.uppercased())"
-        return "\(category) / BINANCE USD-M \(contract.contractType) / \(contract.status)"
+private struct ContractMarketTag: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(EditorialTheme.smallCaps)
+            .tracking(0.6)
+            .foregroundStyle(EditorialTheme.accent)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .accessibilityLabel("Contract type \(text)")
     }
 }
 
@@ -249,7 +254,7 @@ private struct EmptyContractsView: View {
 
     private var title: String {
         switch marketType {
-        case .traditional: "No traditional contracts"
+        case .traditional: "No TradFi contracts"
         case .crypto: "Crypto market board unavailable"
         case .all: "Market board unavailable"
         }
@@ -258,7 +263,7 @@ private struct EmptyContractsView: View {
     private var message: String {
         switch marketType {
         case .traditional:
-            "No traditional contracts were returned by Binance for this refresh. Pull to refresh or check the server connection."
+            "No TradFi contracts were returned by Binance for this refresh. Pull to refresh or check the server connection."
         case .crypto, .all:
             "Pull to refresh, or check the API URL and key in Settings."
         }

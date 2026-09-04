@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @Bindable var model: CalendarViewModel
+    @State private var path = NavigationPath()
 
     private var sections: [(date: Date, events: [CalendarEvent])] {
         Dictionary(grouping: model.events) { EditorialDateFormatter.calendarDay($0.eventAt) }
@@ -10,7 +11,7 @@ struct CalendarView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 EditorialTheme.paper.ignoresSafeArea()
                 VStack(spacing: 0) {
@@ -35,31 +36,32 @@ struct CalendarView: View {
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(EditorialTheme.paper)
 
-                        ForEach(sections, id: \.date) { section in
-                            Section {
-                                ForEach(section.events) { event in
-                                    NavigationLink {
-                                        CalendarDetailView(event: event, model: model)
-                                    } label: {
-                                        CalendarEventRow(event: event)
+                            ForEach(sections, id: \.date) { section in
+                                Section {
+                                    ForEach(section.events) { event in
+                                        Button {
+                                            path.append(event.sourceID)
+                                        } label: {
+                                            CalendarEventRow(event: event)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(EditorialTheme.paper)
                                     }
-                                    .buttonStyle(.plain)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(EditorialTheme.paper)
+                                } header: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(EditorialDateFormatter.calendarDayLabel(section.date))
+                                            .font(EditorialTheme.smallCaps)
+                                            .tracking(1.2)
+                                            .foregroundStyle(EditorialTheme.accent)
+                                        EditorialRule(weight: .strong)
+                                    }
+                                    .padding(.top, 18)
+                                    .textCase(nil)
                                 }
-                            } header: {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(EditorialDateFormatter.calendarDayLabel(section.date))
-                                        .font(EditorialTheme.smallCaps)
-                                        .tracking(1.2)
-                                        .foregroundStyle(EditorialTheme.accent)
-                                    EditorialRule(weight: .strong)
-                                }
-                                .padding(.top, 18)
-                                .textCase(nil)
                             }
-                        }
                         }
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
@@ -73,6 +75,14 @@ struct CalendarView: View {
             .toolbar {
                 if model.isRefreshing {
                     ToolbarItem(placement: .topBarTrailing) { ProgressView() }
+                }
+            }
+            .navigationDestination(for: String.self) { sourceID in
+                if let event = model.events.first(where: { $0.sourceID == sourceID }) {
+                    CalendarDetailView(event: event, model: model)
+                } else {
+                    ContentUnavailableView(
+                        "Event unavailable", systemImage: "calendar.badge.exclamationmark")
                 }
             }
         }
