@@ -4,7 +4,7 @@ struct CalendarView: View {
     @Bindable var model: CalendarViewModel
 
     private var sections: [(date: Date, events: [CalendarEvent])] {
-        Dictionary(grouping: model.events) { Calendar.current.startOfDay(for: $0.eventAt) }
+        Dictionary(grouping: model.events) { EditorialDateFormatter.calendarDay($0.eventAt) }
             .map { (date: $0.key, events: $0.value) }
             .sorted { $0.date < $1.date }
     }
@@ -18,7 +18,7 @@ struct CalendarView: View {
                     if model.events.isEmpty, !model.isRefreshing {
                         ScrollView {
                             VStack(spacing: 40) {
-                                EditorialMasthead(section: "Calendar")
+                                calendarHeader
                                 ContentUnavailableView(
                                     "No calendar events",
                                     systemImage: "calendar",
@@ -30,7 +30,7 @@ struct CalendarView: View {
                         .refreshable { await model.refresh() }
                     } else {
                         List {
-                            EditorialMasthead(section: "Calendar")
+                            calendarHeader
                                 .listRowInsets(EdgeInsets(top: 18, leading: 20, bottom: 12, trailing: 20))
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(EditorialTheme.paper)
@@ -45,7 +45,7 @@ struct CalendarView: View {
                                 }
                             } header: {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text(section.date.formatted(.dateTime.weekday(.wide).month().day()).uppercased())
+                                    Text(EditorialDateFormatter.calendarDayLabel(section.date))
                                         .font(EditorialTheme.smallCaps)
                                         .tracking(1.2)
                                         .foregroundStyle(EditorialTheme.accent)
@@ -72,6 +72,19 @@ struct CalendarView: View {
             }
         }
     }
+
+    private var calendarHeader: some View {
+        VStack(spacing: 10) {
+            EditorialMasthead(section: "Calendar")
+            HStack {
+                Spacer()
+                Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
+                    .font(EditorialTheme.smallCaps)
+                    .tracking(0.8)
+                    .foregroundStyle(EditorialTheme.accent)
+            }
+        }
+    }
 }
 
 private struct CalendarEventRow: View {
@@ -80,7 +93,7 @@ private struct CalendarEventRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Text(event.eventAt, style: .time)
+                Text(EditorialDateFormatter.calendarTime(event.eventAt))
                     .font(EditorialTheme.metadata.monospacedDigit())
                 Text(event.currency)
                     .font(EditorialTheme.metadata.weight(.bold))

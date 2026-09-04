@@ -45,13 +45,38 @@ enum EditorialTheme {
 }
 
 enum EditorialDateFormatter {
+    static let utcPlusEightLabel = "UTC+8"
+
+    private static var utcPlusEightTimeZone: TimeZone {
+        TimeZone(secondsFromGMT: 8 * 60 * 60)!
+    }
+
     static func newsTime(_ date: Date) -> String {
+        "\(calendarTime(date)) \(utcPlusEightLabel)"
+    }
+
+    static func calendarTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)
+        formatter.timeZone = utcPlusEightTimeZone
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
+    }
+
+    static func calendarDay(_ date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = utcPlusEightTimeZone
+        return calendar.startOfDay(for: date)
+    }
+
+    static func calendarDayLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = utcPlusEightTimeZone
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: date).uppercased()
     }
 
     static func publicationDate(

@@ -18,7 +18,27 @@ final class EditorialThemeTests: XCTestCase {
             ISO8601DateFormatter().date(from: "2026-09-03T01:05:00Z")
         )
 
-        XCTAssertEqual(EditorialDateFormatter.newsTime(date), "09:05")
+        XCTAssertEqual(EditorialDateFormatter.newsTime(date), "09:05 UTC+8")
+    }
+
+    func testCalendarTimeUsesFixedUTCPlusEightClock() throws {
+        let date = try XCTUnwrap(
+            ISO8601DateFormatter().date(from: "2026-09-03T01:05:00Z")
+        )
+
+        XCTAssertEqual(EditorialDateFormatter.calendarTime(date), "09:05")
+    }
+
+    func testCalendarDayUsesUTCPlusEightAcrossTheUTCDateBoundary() throws {
+        let date = try XCTUnwrap(
+            ISO8601DateFormatter().date(from: "2026-09-03T17:05:00Z")
+        )
+        let expectedStart = try XCTUnwrap(
+            ISO8601DateFormatter().date(from: "2026-09-03T16:00:00Z")
+        )
+
+        XCTAssertEqual(EditorialDateFormatter.calendarDay(date), expectedStart)
+        XCTAssertEqual(EditorialDateFormatter.calendarDayLabel(date), "FRIDAY, SEP 4")
     }
 
     func testImpactMarkerMapsEveryKnownImpactToAStableLabel() {
