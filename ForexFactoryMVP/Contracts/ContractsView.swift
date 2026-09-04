@@ -139,7 +139,7 @@ private struct ContractRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contract.symbol)
                         .font(EditorialTheme.headline(.headline, weight: .semibold))
-                    Text("\(contract.marketType.uppercased()) / BINANCE USD-M \(contract.contractType) / \(contract.status)")
+                    Text(contractTypeLine)
                         .font(EditorialTheme.metadata)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }
@@ -179,6 +179,13 @@ private struct ContractRow: View {
 
     private func abbreviated(_ value: Double) -> String {
         value.formatted(.number.notation(.compactName).precision(.fractionLength(1)))
+    }
+
+    private var contractTypeLine: String {
+        let category = contract.underlyingType.isEmpty
+            ? contract.marketType.uppercased()
+            : "\(contract.marketType.uppercased()) / \(contract.underlyingType.uppercased())"
+        return "\(category) / BINANCE USD-M \(contract.contractType) / \(contract.status)"
     }
 }
 
@@ -251,7 +258,7 @@ private struct EmptyContractsView: View {
     private var message: String {
         switch marketType {
         case .traditional:
-            "The current Binance futures source only returns crypto derivatives. Traditional contracts will appear here after a traditional-market source is connected."
+            "No traditional contracts were returned by Binance for this refresh. Pull to refresh or check the server connection."
         case .crypto, .all:
             "Pull to refresh, or check the API URL and key in Settings."
         }

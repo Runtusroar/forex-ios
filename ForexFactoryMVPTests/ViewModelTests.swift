@@ -403,6 +403,8 @@ private func sampleContract(symbol: String, quoteVolume: Double) -> BinanceFutur
         pair: symbol,
         contractType: "PERPETUAL",
         marketType: "crypto",
+        underlyingType: "COIN",
+        underlyingSubtypes: ["Layer 1"],
         status: "TRADING",
         baseAsset: String(symbol.dropLast(4)),
         quoteAsset: "USDT",

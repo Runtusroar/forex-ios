@@ -516,6 +516,8 @@ struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
     let pair: String
     let contractType: String
     let marketType: String
+    let underlyingType: String
+    let underlyingSubtypes: [String]
     let status: String
     let baseAsset: String
     let quoteAsset: String
@@ -539,6 +541,8 @@ struct BinanceFuturesContract: Codable, Identifiable, Equatable, Sendable {
         case symbol, pair, status, count
         case contractType = "contract_type"
         case marketType = "market_type"
+        case underlyingType = "underlying_type"
+        case underlyingSubtypes = "underlying_subtypes"
         case baseAsset = "base_asset"
         case quoteAsset = "quote_asset"
         case marginAsset = "margin_asset"

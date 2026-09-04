@@ -91,12 +91,14 @@ final class APIModelsTests: XCTestCase {
     }
 
     func testBinanceFuturesContractDecodesMarketMetrics() throws {
-        let json = #"{"symbol":"BTCUSDT","pair":"BTCUSDT","contract_type":"PERPETUAL","market_type":"crypto","status":"TRADING","base_asset":"BTC","quote_asset":"USDT","margin_asset":"USDT","last_price":102000.0,"weighted_avg_price":101000.0,"price_change":100.0,"price_change_percent":2.5,"high_price":110000.0,"low_price":95000.0,"open_price":100000.0,"volume":1000.0,"quote_volume":102000000.0,"count":100,"volatility_percent":15.0,"updated_at":"2026-09-04T12:20:00Z"}"#
+        let json = #"{"symbol":"BTCUSDT","pair":"BTCUSDT","contract_type":"PERPETUAL","market_type":"crypto","underlying_type":"COIN","underlying_subtypes":["Layer 1"],"status":"TRADING","base_asset":"BTC","quote_asset":"USDT","margin_asset":"USDT","last_price":102000.0,"weighted_avg_price":101000.0,"price_change":100.0,"price_change_percent":2.5,"high_price":110000.0,"low_price":95000.0,"open_price":100000.0,"volume":1000.0,"quote_volume":102000000.0,"count":100,"volatility_percent":15.0,"updated_at":"2026-09-04T12:20:00Z"}"#
         let contract = try JSONDecoder.api.decode(BinanceFuturesContract.self, from: Data(json.utf8))
 
         XCTAssertEqual(contract.symbol, "BTCUSDT")
         XCTAssertEqual(contract.contractType, "PERPETUAL")
         XCTAssertEqual(contract.marketType, "crypto")
+        XCTAssertEqual(contract.underlyingType, "COIN")
+        XCTAssertEqual(contract.underlyingSubtypes, ["Layer 1"])
         XCTAssertEqual(contract.lastPrice, 102_000)
         XCTAssertEqual(contract.quoteVolume, 102_000_000)
         XCTAssertEqual(contract.volatilityPercent, 15.0)
