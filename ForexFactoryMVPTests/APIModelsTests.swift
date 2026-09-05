@@ -123,6 +123,7 @@ final class APIModelsTests: XCTestCase {
         let presentation = NewsDetailMediaPresentation(detail: detail, summary: summary)
 
         XCTAssertEqual(presentation.fallbackThumbnailURL, detailThumbnail)
+        XCTAssertTrue(presentation.hasProcessingMedia)
     }
 
     func testDetailMediaPresentationSkipsThumbnailWhenSegmentMediaIsDisplayable() {
@@ -140,6 +141,7 @@ final class APIModelsTests: XCTestCase {
         let presentation = NewsDetailMediaPresentation(detail: detail, summary: nil)
 
         XCTAssertNil(presentation.fallbackThumbnailURL)
+        XCTAssertFalse(presentation.hasProcessingMedia)
     }
 
     func testNewsMediaPresentationShowsProcessingForPendingMedia() {

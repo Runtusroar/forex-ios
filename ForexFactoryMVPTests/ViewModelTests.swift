@@ -18,6 +18,7 @@ private actor StubForexAPI: ForexAPI {
     private var calendarDetails: [String: CalendarDetail] = [:]
     private var topContractsEnvelopes: [ContractMarketFilter: BinanceContractsEnvelope]
     private var articlePages: [String: NewsArticlesEnvelope] = [:]
+    private var newsDelays: [NewsSectionID: Duration] = [:]
     private var commentsEnvelope = NewsCommentsEnvelope(
         items: [], nextCursor: nil, commentsComplete: false, generatedAt: Date(timeIntervalSince1970: 1)
     )
@@ -59,6 +60,10 @@ private actor StubForexAPI: ForexAPI {
         articlePages[key(section: section, impact: impact, cursor: cursor)] = envelope
     }
 
+    func setNewsDelay(_ delay: Duration, for section: NewsSectionID) {
+        newsDelays[section] = delay
+    }
+
     func setLatestComments(_ envelope: NewsCommentsEnvelope) {
         commentsEnvelope = envelope
     }
@@ -96,6 +101,9 @@ private actor StubForexAPI: ForexAPI {
     ) async throws -> NewsArticlesEnvelope {
         if shouldFail { throw URLError(.notConnectedToInternet) }
         articleCalls.append(ArticleCall(section: section, impact: impact, cursor: cursor))
+        if let delay = newsDelays[section] {
+            try await Task.sleep(for: delay)
+        }
         return articlePages[key(section: section, impact: impact, cursor: cursor)]
             ?? NewsArticlesEnvelope(
                 items: [], nextCursor: nil, generatedAt: Date(timeIntervalSince1970: 300)
@@ -220,6 +228,84 @@ final class ViewModelTests: XCTestCase {
         await model.select(.latest)
         XCTAssertEqual(model.currentArticles.map(\.sourceID), ["latest"])
         XCTAssertEqual(model.sections.count, 8)
+    }
+
+    @MainActor
+    func testNewsPreservesServerRankingForArticlesAndComments() async throws {
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
+        let rankedFirst = sampleArticle(id: "rank-1", date: 100)
+        let newerSecond = sampleArticle(id: "rank-2", date: 200)
+        await api.setArticlePage(
+            section: .latest,
+            envelope: NewsArticlesEnvelope(
+                items: [rankedFirst, newerSecond], nextCursor: nil, generatedAt: .now
+            )
+        )
+        await api.setLatestComments(
+            NewsCommentsEnvelope(
+                items: [
+                    sampleComment(id: "comment-rank-1", date: 100),
+                    sampleComment(id: "comment-rank-2", date: 200),
+                ],
+                nextCursor: nil,
+                commentsComplete: false,
+                generatedAt: .now
+            )
+        )
+        let model = NewsViewModel(api: api, cache: ResponseCache(directory: temporaryDirectory()))
+
+        await model.refresh()
+        XCTAssertEqual(model.currentArticles.map(\.sourceID), ["rank-1", "rank-2"])
+        await model.select(.latestComments)
+        XCTAssertEqual(
+            model.currentComments.map(\.commentID),
+            ["comment-rank-1", "comment-rank-2"]
+        )
+    }
+
+    @MainActor
+    func testNewsSectionCanRefreshWhilePreviousSectionRequestIsInFlight() async throws {
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
+        await api.setArticlePage(
+            section: .latest,
+            envelope: NewsArticlesEnvelope(
+                items: [sampleArticle(id: "latest", date: 100)],
+                nextCursor: nil,
+                generatedAt: .now
+            )
+        )
+        await api.setArticlePage(
+            section: .technical,
+            envelope: NewsArticlesEnvelope(
+                items: [sampleArticle(id: "technical", date: 200)],
+                nextCursor: nil,
+                generatedAt: .now
+            )
+        )
+        await api.setNewsDelay(.milliseconds(100), for: .latest)
+        let model = NewsViewModel(api: api, cache: ResponseCache(directory: temporaryDirectory()))
+
+        let latestRefresh = Task { await model.refresh() }
+        while await api.calls().isEmpty { await Task.yield() }
+        await model.select(.technical)
+        await latestRefresh.value
+
+        XCTAssertEqual(model.currentArticles.map(\.sourceID), ["technical"])
+        let sections = await api.calls().map(\.section)
+        XCTAssertEqual(sections, [.latest, .technical])
+    }
+
+    func testRootTabRefreshPolicyOnlyActivatesVisibleDataTab() {
+        XCTAssertEqual(
+            RootTabRefreshPolicy.activeDataTab(selected: .news, appIsActive: true),
+            .news
+        )
+        XCTAssertNil(
+            RootTabRefreshPolicy.activeDataTab(selected: .settings, appIsActive: true)
+        )
+        XCTAssertNil(
+            RootTabRefreshPolicy.activeDataTab(selected: .calendar, appIsActive: false)
+        )
     }
 
     @MainActor
@@ -442,13 +528,16 @@ private func sampleArticle(
     )
 }
 
-private func sampleComment() -> NewsComment {
+private func sampleComment(
+    id: String = "comment-1",
+    date: TimeInterval = 100
+) -> NewsComment {
     NewsComment(
-        commentID: "comment-1",
+        commentID: id,
         articleID: "article-1",
         parentCommentID: nil,
         authorName: "Alice",
-        publishedAt: Date(timeIntervalSince1970: 100),
+        publishedAt: Date(timeIntervalSince1970: date),
         publishedAtSourceText: nil,
         text: LocalizedText(en: "Useful", zhHans: "有用"),
         permalink: URL(string: "https://www.forexfactory.com/comment/1")!,

@@ -29,11 +29,12 @@ final class NewsViewModel {
     private var activationTask: Task<Void, Never>?
     private var articleStates: [NewsContentKey: ArticlePageState] = [:]
     private var commentState = CommentPageState()
+    private var refreshingKeys: Set<NewsContentKey> = []
 
     var sections: [NewsSection] = NewsViewModel.fallbackSections
     var selectedSection: NewsSectionID = .latest
     var impactFilter: Impact?
-    var isRefreshing = false
+    var isRefreshing: Bool { refreshingKeys.contains(currentKey) }
     var isLoadingMore = false
     var staleSince: Date?
     var errorMessage: String?
@@ -123,13 +124,11 @@ final class NewsViewModel {
     }
 
     func refresh() async {
-        guard !isRefreshing else { return }
-        isRefreshing = true
-        defer { isRefreshing = false }
-
         let section = selectedSection
         let impact = impactFilter
         let key = NewsContentKey(section: section, impact: impact)
+        guard refreshingKeys.insert(key).inserted else { return }
+        defer { refreshingKeys.remove(key) }
         do {
             let api = try makeAPI()
             if let metadata = try? await api.newsSections(), !metadata.items.isEmpty {
@@ -139,7 +138,7 @@ final class NewsViewModel {
                 let envelope = try await api.latestComments(limit: 50, cursor: nil)
                 guard selectedSection == section else { return }
                 commentState = CommentPageState(
-                    items: Self.sorted(envelope.items),
+                    items: envelope.items,
                     nextCursor: envelope.nextCursor,
                     generatedAt: envelope.generatedAt,
                     isLoaded: true
@@ -154,7 +153,7 @@ final class NewsViewModel {
                 )
                 guard currentKey == key else { return }
                 articleStates[key] = ArticlePageState(
-                    items: Self.sorted(envelope.items),
+                    items: envelope.items,
                     nextCursor: envelope.nextCursor,
                     generatedAt: envelope.generatedAt,
                     isLoaded: true
@@ -245,7 +244,7 @@ final class NewsViewModel {
                   )
             else { return }
             commentState = CommentPageState(
-                items: Self.sorted(envelope.items),
+                items: envelope.items,
                 nextCursor: envelope.nextCursor,
                 generatedAt: envelope.generatedAt,
                 isLoaded: true
@@ -259,7 +258,7 @@ final class NewsViewModel {
                   )
             else { return }
             articleStates[key] = ArticlePageState(
-                items: Self.sorted(envelope.items),
+                items: envelope.items,
                 nextCursor: envelope.nextCursor,
                 generatedAt: envelope.generatedAt,
                 isLoaded: true
@@ -282,14 +281,6 @@ final class NewsViewModel {
             ? commentState.generatedAt
             : articleStates[currentKey]?.generatedAt
         errorMessage = nil
-    }
-
-    private static func sorted(_ items: [NewsArticleSummary]) -> [NewsArticleSummary] {
-        items.sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
-    }
-
-    private static func sorted(_ items: [NewsComment]) -> [NewsComment] {
-        items.sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
     }
 
     private static func appendingUnique<Item, ID: Hashable>(

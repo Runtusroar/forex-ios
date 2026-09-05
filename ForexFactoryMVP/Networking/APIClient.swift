@@ -92,7 +92,7 @@ struct APIRequestBuilder: Sendable {
     }
 
     func calendarDetail(id: String) throws -> URLRequest {
-        try request(path: "/api/v1/calendar/\(id)")
+        try request(path: "/api/v1/calendar/\(id)", timeoutInterval: 30)
     }
 
     func newsSections() throws -> URLRequest {
@@ -137,7 +137,7 @@ struct APIRequestBuilder: Sendable {
         else {
             throw APIError.invalidConfiguration
         }
-        return try request(path: path)
+        return try request(path: path, accept: "image/*")
     }
 
     func topContracts(limit: Int, marketType: ContractMarketFilter) throws -> URLRequest {
@@ -162,7 +162,12 @@ struct APIRequestBuilder: Sendable {
         return try request(path: path, queryItems: queryItems)
     }
 
-    private func request(path: String, queryItems: [URLQueryItem] = []) throws -> URLRequest {
+    private func request(
+        path: String,
+        queryItems: [URLQueryItem] = [],
+        timeoutInterval: TimeInterval = 15,
+        accept: String = "application/json"
+    ) throws -> URLRequest {
         guard baseURL.scheme == "https" || baseURL.host == "127.0.0.1" else {
             throw APIError.invalidConfiguration
         }
@@ -174,9 +179,9 @@ struct APIRequestBuilder: Sendable {
         guard let url = components.url, !apiKey.isEmpty else {
             throw APIError.invalidConfiguration
         }
-        var request = URLRequest(url: url, timeoutInterval: 15)
+        var request = URLRequest(url: url, timeoutInterval: timeoutInterval)
         request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(accept, forHTTPHeaderField: "Accept")
         request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
         return request
     }

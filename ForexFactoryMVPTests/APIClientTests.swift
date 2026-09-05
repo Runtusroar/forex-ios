@@ -26,6 +26,7 @@ final class APIClientTests: XCTestCase {
 
         XCTAssertEqual(components.path, "/api/v1/calendar/149673")
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
+        XCTAssertEqual(request.timeoutInterval, 30)
     }
 
     func testNewsV2RequestIncludesSectionImpactCursorAndAPIKey() throws {
@@ -67,6 +68,7 @@ final class APIClientTests: XCTestCase {
 
         XCTAssertEqual(request.url?.absoluteString, "https://api.juezhou.cc/api/v2/news/media/7")
         XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "image/*")
         XCTAssertThrowsError(try builder.media(path: "https://assets.example/image.png")) { error in
             XCTAssertEqual(error as? APIError, .invalidConfiguration)
         }

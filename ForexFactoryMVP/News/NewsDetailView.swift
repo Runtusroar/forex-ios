@@ -2,13 +2,14 @@ import SwiftUI
 
 struct NewsDetailMediaPresentation: Equatable, Sendable {
     let fallbackThumbnailURL: URL?
+    let hasProcessingMedia: Bool
 
     init(detail: NewsArticleDetail?, summary: NewsArticleSummary?) {
-        let hasDisplayableSegmentMedia = detail?.segments.contains { segment in
-            segment.media.contains { media in
-                NewsMediaPresentation(media: media).hasDisplayableImage
-            }
-        } ?? false
+        let mediaStates = detail?.segments.flatMap(\.media).map {
+            NewsMediaPresentation(media: $0)
+        } ?? []
+        let hasDisplayableSegmentMedia = mediaStates.contains(where: \.hasDisplayableImage)
+        hasProcessingMedia = mediaStates.contains { $0.state == .processing }
 
         fallbackThumbnailURL = hasDisplayableSegmentMedia
             ? nil
@@ -155,15 +156,30 @@ struct NewsDetailView: View {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
         do {
             async let loadedDetail = model.v2Detail(id: articleID)
             async let loadedComments = model.comments(id: articleID)
             detail = try await loadedDetail
             let commentEnvelope = try? await loadedComments
             comments = commentEnvelope?.items ?? []
+            isLoading = false
+            await refreshProcessingMedia()
         } catch {
+            isLoading = false
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Please try again."
+        }
+    }
+
+    private func refreshProcessingMedia() async {
+        for _ in 0 ..< 5 {
+            guard mediaPresentation.hasProcessingMedia else { return }
+            do {
+                try await Task.sleep(for: .seconds(2))
+                try Task.checkCancellation()
+                detail = try await model.v2Detail(id: articleID)
+            } catch {
+                return
+            }
         }
     }
 }

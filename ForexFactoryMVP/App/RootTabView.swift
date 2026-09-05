@@ -30,6 +30,7 @@ struct RootTabView: View {
         .tint(EditorialTheme.accent)
         .onAppear { update(for: scenePhase) }
         .onChange(of: scenePhase) { _, newPhase in update(for: newPhase) }
+        .onChange(of: selection) { _, _ in update(for: scenePhase) }
     }
 
     private var editorialTabBar: some View {
@@ -62,15 +63,33 @@ struct RootTabView: View {
     }
 
     private func update(for phase: ScenePhase) {
-        if phase == .active {
+        calendarModel.deactivate()
+        newsModel.deactivate()
+        contractsModel.deactivate()
+
+        switch RootTabRefreshPolicy.activeDataTab(
+            selected: selection,
+            appIsActive: phase == .active
+        ) {
+        case .calendar:
             calendarModel.activate()
+        case .news:
             newsModel.activate()
+        case .contracts:
             contractsModel.activate()
-        } else {
-            calendarModel.deactivate()
-            newsModel.deactivate()
-            contractsModel.deactivate()
+        case nil, .settings:
+            break
         }
+    }
+}
+
+enum RootTabRefreshPolicy {
+    static func activeDataTab(
+        selected: RootTab,
+        appIsActive: Bool
+    ) -> RootTab? {
+        guard appIsActive, selected != .settings else { return nil }
+        return selected
     }
 }
 

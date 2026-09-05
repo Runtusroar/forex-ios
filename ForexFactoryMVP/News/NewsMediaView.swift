@@ -74,7 +74,11 @@ struct NewsMediaView: View {
                     .foregroundStyle(EditorialTheme.mutedInk)
             }
         }
-        .task(id: mediaTaskID) { await load() }
+        .task(id: mediaTaskID) {
+            image = nil
+            failed = false
+            await load()
+        }
     }
 
     private var mediaTaskID: String {
@@ -82,8 +86,17 @@ struct NewsMediaView: View {
     }
 
     private var unavailableView: some View {
-        ContentUnavailableView("Image unavailable", systemImage: "photo.badge.exclamationmark")
-            .frame(minHeight: 120)
+        ContentUnavailableView {
+            Label("Image unavailable", systemImage: "photo.badge.exclamationmark")
+        } actions: {
+            Button {
+                failed = false
+                Task { await load() }
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+        }
+        .frame(minHeight: 120)
     }
 
     private func load() async {
