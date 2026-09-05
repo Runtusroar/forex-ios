@@ -1,0 +1,11 @@
+READER_HEIGHTS initial=11639.333333333332 reverse=[11639.333333333332, 11639.333333333332, 11639.333333333332, 11639.333333333332, 11639.333333333332, 11639.333333333332]
+READER_MEDIA_REQUESTS ["/media/8": 1, "/media/24": 1, "/media/12": 1, "/media/32": 1, "/media/4": 1, "/media/16": 1, "/media/0": 1, "/media/20": 1, "/media/28": 1]
+	 Executed 79 tests, with 0 failures (0 unexpected) in 32.019 (32.046) seconds
+	 Executed 79 tests, with 0 failures (0 unexpected) in 32.019 (32.047) seconds
+** TEST SUCCEEDED **
+LIVE_IMAGE_HTTP status=200 bytes=18536
+LIVE_IMAGE_TIMING cold_ms=476.50396823883057 memory_ms=0.431060791015625 disk_ms=0.18799304962158203
+** TEST SUCCEEDED **
+Device build: BUILD SUCCEEDED.
+Installed and launched shop.zhenmei.ForexFactoryMVP on iPhone 15 Pro at 2026-09-05 17:45 Asia/Shanghai.
+Source whitespace check passed; NewsDetailView contains no LastUpdatedText references.

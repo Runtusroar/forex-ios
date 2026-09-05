@@ -4,146 +4,96 @@ struct SettingsView: View {
     @Bindable var settings: AppSettings
     @State private var connectionMessage: String?
     @State private var isTesting = false
+    @State private var lastCheckedAt: Date?
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                EditorialTheme.paper.ignoresSafeArea()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 28) {
-                        EditorialMasthead(section: "Settings")
-
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    PageHeader(title: "Settings", subtitle: "", date: nil)
+                    VStack(alignment: .leading, spacing: EditorialSpacing.section) {
                         VStack(alignment: .leading, spacing: 16) {
-                            sectionTitle("Backend")
-                            fieldLabel("Server address")
-                            TextField("https://api.juezhou.cc", text: $settings.baseURLText)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .keyboardType(.URL)
-                                .font(.body.monospaced())
-                                .padding(.vertical, 8)
-                                .overlay(alignment: .bottom) { EditorialRule() }
-
-                            fieldLabel("Private API key")
-                            SecureField(
-                                settings.hasStoredAPIKey ? "API key already saved" : "API key",
-                                text: $settings.apiKeyText
-                            )
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .font(.body.monospaced())
-                            .padding(.vertical, 8)
-                            .overlay(alignment: .bottom) { EditorialRule() }
-
-                            Text("The API key stays in this iPhone's Keychain. Kimi credentials remain on the server.")
+                            sectionTitle("Connection")
+                            VStack(alignment: .leading, spacing: 8) {
+                                fieldLabel("Server address")
+                                TextField("https://api.juezhou.cc", text: $settings.baseURLText)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .keyboardType(.URL)
+                                    .modifier(SettingsInputStyle())
+                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                fieldLabel("Private API key")
+                                SecureField(settings.hasStoredAPIKey ? "API key already saved" : "API key", text: $settings.apiKeyText)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .modifier(SettingsInputStyle())
+                            }
+                            Text("Your API key is stored in this iPhone’s Keychain. Kimi credentials stay on the server.")
                                 .font(.footnote)
                                 .foregroundStyle(EditorialTheme.mutedInk)
                                 .lineSpacing(3)
                         }
-
-                        VStack(alignment: .leading, spacing: 0) {
-                            sectionTitle("Actions")
-                            Button { save() } label: { actionRow("Save settings") }
-                                .buttonStyle(.plain)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Button("Save settings", action: save)
+                                .buttonStyle(FlatActionStyle(primary: true))
                             Button {
                                 Task { await testConnection() }
                             } label: {
-                                actionRow("Test connection", isLoading: isTesting)
+                                HStack(spacing: 10) {
+                                    Text("Test connection")
+                                }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(FlatActionStyle())
                             .disabled(isTesting)
                             if settings.hasStoredAPIKey {
-                                Button(role: .destructive) { removeKey() } label: {
-                                    actionRow("Remove API key", destructive: true)
-                                }
-                                .buttonStyle(.plain)
+                                Button("Remove API key", role: .destructive, action: removeKey)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(EditorialTheme.negative)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
                             }
-                    }
-
-                        if let message = connectionMessage ?? settings.message {
-                            VStack(alignment: .leading, spacing: 12) {
-                                sectionTitle("Status")
-                                HStack(alignment: .top, spacing: 12) {
-                                    Rectangle()
-                                        .fill(EditorialTheme.accent)
-                                        .frame(width: 3)
-                                    Text(message)
-                                        .font(.subheadline)
-                                        .foregroundStyle(EditorialTheme.ink)
-                                }
-                                .padding(.vertical, 4)
+                            if let lastCheckedAt {
+                                Text("Last checked " + EditorialDateFormatter.timestamp(lastCheckedAt))
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(EditorialTheme.mutedInk)
+                            }
+                            if let message = connectionMessage ?? settings.message {
+                                Text(message)
+                                    .font(.subheadline)
+                                    .lineSpacing(3)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(14)
+                                    .background(EditorialTheme.subtleSurface)
+                                    .accessibilityLabel("Connection status: " + message)
                             }
                         }
-
-                        VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: EditorialSpacing.content) {
                             sectionTitle("Refresh")
-                            infoRow("While app is open", value: "Every 30 seconds")
-                            infoRow("In background", value: "Paused")
+                            LabeledContent("Calendar & news", value: "Every 30 seconds")
+                            LabeledContent("Contracts", value: "Every 5 seconds")
+                            LabeledContent("In background", value: "Paused")
                         }
+                        .font(.subheadline)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 36)
+                    .padding(.top, EditorialSpacing.related)
+                    .padding(.bottom, EditorialSpacing.section)
                 }
             }
-            .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
-            .navigationBarTitleDisplayMode(.inline)
+            .scrollDismissesKeyboard(.interactively)
+            .foregroundStyle(EditorialTheme.ink)
+            .tint(EditorialTheme.accent)
+            .background(EditorialTheme.paper.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
     }
 
     private func sectionTitle(_ title: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(EditorialTheme.smallCaps)
-                .tracking(1.2)
-                .foregroundStyle(EditorialTheme.accent)
-            EditorialRule(weight: .strong)
-        }
+        Text(title).font(.headline).accessibilityAddTraits(.isHeader)
     }
 
     private func fieldLabel(_ label: String) -> some View {
-        Text(label.uppercased())
-            .font(EditorialTheme.smallCaps)
-            .tracking(0.8)
-            .foregroundStyle(EditorialTheme.mutedInk)
-    }
-
-    private func actionRow(
-        _ title: String,
-        isLoading: Bool = false,
-        destructive: Bool = false
-    ) -> some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(.body.weight(.semibold))
-                Spacer()
-                if isLoading {
-                    ProgressView()
-                } else {
-                    Image(systemName: "arrow.right")
-                }
-            }
-            .foregroundStyle(destructive ? Color.red : EditorialTheme.ink)
-            .padding(.vertical, 15)
-            EditorialRule()
-        }
-        .contentShape(Rectangle())
-    }
-
-    private func infoRow(_ title: String, value: String) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(title)
-                    .foregroundStyle(EditorialTheme.ink)
-                Spacer()
-                Text(value)
-                    .font(EditorialTheme.metadata)
-                    .foregroundStyle(EditorialTheme.mutedInk)
-            }
-            .padding(.vertical, 14)
-            EditorialRule()
-        }
+        Text(label).font(.subheadline).foregroundStyle(EditorialTheme.mutedInk)
     }
 
     private func save() {
@@ -175,10 +125,24 @@ struct SettingsView: View {
                 baseURL: credentials.baseURL,
                 apiKey: credentials.apiKey
             ).status()
+            lastCheckedAt = Date()
             connectionMessage = "Connected — \(status.status), translation: \(status.model)"
         } catch {
             isTesting = false
             connectionMessage = (error as? LocalizedError)?.errorDescription ?? "Connection failed."
         }
+    }
+}
+
+
+private struct SettingsInputStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.body)
+            .padding(.horizontal, 12)
+            .padding(.vertical, EditorialSpacing.content)
+            .frame(minHeight: 48)
+            .background(EditorialTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 3))
+            .overlay { RoundedRectangle(cornerRadius: 3).stroke(EditorialTheme.rule, lineWidth: 1) }
     }
 }

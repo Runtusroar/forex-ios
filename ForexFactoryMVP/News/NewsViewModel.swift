@@ -39,6 +39,10 @@ final class NewsViewModel {
     var staleSince: Date?
     var errorMessage: String?
 
+    var lastUpdatedAt: Date? {
+        selectedSection == .latestComments ? commentState.generatedAt : articleStates[currentKey]?.generatedAt
+    }
+
     var currentArticles: [NewsArticleSummary] {
         guard selectedSection != .latestComments else { return [] }
         return articleStates[currentKey]?.items ?? []

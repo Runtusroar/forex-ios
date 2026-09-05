@@ -1,3 +1,13 @@
+> Latest revision: [compact headings, detail timestamps and image reuse](docs/design-qa/image-cache-2026-09-05/README.md).
+
+> Latest revision: [right-aligned dates and threaded discussion](docs/design-qa/comment-tree-2026-09-05/README.md).
+
+> Current revision: [whole-app spacing and Forex Factory-style discussion](docs/design-qa/spacing-2026-09-05/README.md). Supersedes the large Discussion panel below; full Last updated wording retained.
+
+> Latest update: [quiet refresh, precise timestamps and stable article discussion](docs/design-qa/reader-update-2026-09-05/README.md). Verified and installed on iPhone 15 Pro.
+
+> The implemented 2026-09-05 global redesign supersedes this historical visual target and the intermediate readability revision. See [current global redesign and native screenshots](docs/design-qa/global-ui-2026-09-05/README.md).
+
 # Editorial UI Design QA
 
 - Source visual truth: `docs/design-references/editorial-news-home-selected.png`

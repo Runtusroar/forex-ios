@@ -2,6 +2,11 @@ import XCTest
 @testable import ForexFactoryMVP
 
 final class EditorialThemeTests: XCTestCase {
+    func testPreciseTimestampUsesUTCPlusEightAndCrossesDateBoundary() throws {
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-04T16:05:09Z"))
+        XCTAssertEqual(EditorialDateFormatter.timestamp(date), "2026-09-05 00:05:09 UTC+8")
+    }
+
     func testPublicationDateUsesSameUTCPlusEightDayAsCalendar() throws {
         let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-04T16:30:00Z"))
         XCTAssertEqual(EditorialDateFormatter.publicationDate(date), "SEP 5, 2026")

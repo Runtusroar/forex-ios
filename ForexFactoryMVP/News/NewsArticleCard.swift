@@ -4,69 +4,46 @@ struct NewsArticleCard: View {
     let article: NewsArticleSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 9) {
+        VStack(alignment: .leading, spacing: EditorialSpacing.related) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(article.sourceName ?? "Forex Factory")
-                    .font(EditorialTheme.metadata.weight(.bold))
-                    .foregroundStyle(EditorialTheme.ink)
+                    .font(EditorialTheme.metadata)
+                    .foregroundStyle(EditorialTheme.mutedInk)
                 if let date = article.publishedAt {
-                    Text("|").foregroundStyle(EditorialTheme.rule)
-                    Text(EditorialDateFormatter.newsTime(date))
+                    Text(EditorialDateFormatter.timestamp(date))
                         .font(EditorialTheme.metadata)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }
-                Spacer(minLength: 0)
             }
-            BilingualText(
+            ContentText(
                 english: article.title.en ?? "Untitled",
-                chinese: article.title.zhHans,
-                role: .sectionHeadline
+                font: .headline
             )
             if let thumbnailURL = article.thumbnailURL {
-                AsyncImage(url: thumbnailURL) { phase in
-                    switch phase {
-                    case let .success(image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        EditorialTheme.subtleSurface.overlay { Image(systemName: "photo") }
-                    default:
-                        EditorialTheme.subtleSurface.overlay { ProgressView() }
-                    }
-                }
+                NewsRemoteImage(url: thumbnailURL, fillsFrame: true, placeholderHeight: 170)
                 .frame(maxWidth: .infinity, minHeight: 170, maxHeight: 170)
                 .clipped()
             }
-            bilingualTeaser
+            teaser
             HStack(spacing: 12) {
                 if let impact = article.breakingImpact { ImpactBadge(impact: impact) }
-                Text("COMMENTS \(article.commentCount)")
-                if article.isExcerpt { Text("EXCERPT") }
+                Label("\(article.commentCount) \(article.commentCount == 1 ? "comment" : "comments")", systemImage: "text.bubble")
+                if article.isExcerpt { Text("Excerpt") }
                 Spacer()
             }
-            .font(EditorialTheme.smallCaps)
-            .tracking(0.3)
+            .font(.caption)
             .foregroundStyle(EditorialTheme.mutedInk)
-            EditorialRule()
         }
-        .padding(.top, 8)
-        .padding(.bottom, 4)
     }
 
     @ViewBuilder
-    private var bilingualTeaser: some View {
+    private var teaser: some View {
         if let english = article.teaser.en, !english.isEmpty {
             Text(english)
-                .font(.system(.subheadline, design: .serif))
-                .foregroundStyle(EditorialTheme.ink.opacity(0.86))
-                .lineSpacing(3)
-                .lineLimit(3)
-        }
-        if let chinese = article.teaser.zhHans, !chinese.isEmpty {
-            Text(chinese)
-                .font(.footnote)
+                .font(.subheadline)
                 .foregroundStyle(EditorialTheme.mutedInk)
-                .lineSpacing(2)
-                .lineLimit(3)
+                .lineSpacing(3)
+                .lineLimit(2)
         }
     }
 }

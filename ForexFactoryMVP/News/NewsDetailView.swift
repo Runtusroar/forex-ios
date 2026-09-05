@@ -26,6 +26,12 @@ struct NewsDetailView: View {
     @State private var comments: [NewsComment] = []
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var commentsError: String?
+    @State private var isLoadingComments = false
+    @State private var commentsComplete: Bool?
+    @State private var commentsNextCursor: String?
+    @State private var failedCommentsCursor: String?
+    @State private var browserDestination: NewsSourceDestination?
 
     private var mediaPresentation: NewsDetailMediaPresentation {
         NewsDetailMediaPresentation(detail: detail, summary: summary)
@@ -35,138 +41,250 @@ struct NewsDetailView: View {
         ZStack {
             EditorialTheme.paper.ignoresSafeArea()
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
-                    header
-                    fallbackThumbnail
-                    if let detail {
-                        ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
-                            NewsSegmentView(segment: segment, model: model)
-                        }
-                        if !comments.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                EditorialRule(weight: .double)
-                                Text("COMMENTS")
-                                    .font(EditorialTheme.smallCaps)
-                                    .tracking(1.2)
-                            }
-                            ForEach(comments) { NewsCommentCard(comment: $0) }
-                        }
-                        Link("OPEN ORIGINAL ON FOREX FACTORY", destination: detail.ffURL)
-                            .font(EditorialTheme.smallCaps)
-                            .tracking(0.5)
-                            .foregroundStyle(EditorialTheme.accent)
-                            .underline()
-                    }
-                    if isLoading {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                            Text("LOADING FOREX FACTORY DETAIL…")
-                                .font(EditorialTheme.smallCaps)
-                        }
-                    }
-                    if let errorMessage {
-                        ContentUnavailableView {
-                            Label("Unable to load detail", systemImage: "wifi.exclamationmark")
-                        } description: {
-                            Text(errorMessage)
-                        } actions: {
-                            Button("Retry") { Task { await load() } }
-                        }
-                    }
+                // Eager layout keeps loaded text and image heights stable when reversing scroll direction.
+                VStack(alignment: .leading, spacing: 0) {
+                    articleContent
+                    commentsSection
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
-                .padding(.bottom, 30)
             }
         }
-        .navigationTitle("ARTICLE")
+        .foregroundStyle(EditorialTheme.ink)
+        .tint(EditorialTheme.accent)
+        .navigationTitle("Article")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .environment(\.openURL, OpenURLAction { url in
+            browserDestination = NewsSourceDestination(url: url)
+            return .handled
+        })
+        .sheet(item: $browserDestination) { destination in
+            NewsSourceBrowser(url: destination.url)
+                .ignoresSafeArea()
+        }
         .task(id: articleID) { await load() }
     }
 
-    @ViewBuilder
+    private var articleContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            header
+            fallbackThumbnail
+            if let detail {
+                ForEach(detail.segments.sorted(by: { $0.position < $1.position })) { segment in
+                    NewsSegmentView(segment: segment, model: model)
+                }
+            }
+            if let errorMessage {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(detail == nil ? "Unable to load article" : "Unable to refresh article")
+                        .font(.headline)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                    Button("Retry article") {
+                        Task {
+                            await loadArticle()
+                            await refreshProcessingMedia()
+                        }
+                    }
+                        .frame(minHeight: 44)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(EditorialTheme.accent)
+                }
+            }
+            if let url = detail?.ffURL ?? summary?.ffURL {
+                Link(destination: url) {
+                    Label("Read original on Forex Factory", systemImage: "arrow.up.right")
+                        .font(.subheadline.weight(.medium))
+                        .frame(minHeight: 44, alignment: .leading)
+                }
+                .foregroundStyle(EditorialTheme.accent)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, EditorialSpacing.content)
+    }
+
     private var header: some View {
         let source = detail?.sourceName ?? summary?.sourceName ?? "Forex Factory"
         let title = detail?.title ?? summary?.title
         let teaser = detail?.teaser ?? summary?.teaser
-        HStack(alignment: .firstTextBaseline) {
-            Text(source.uppercased())
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.6)
-            Spacer()
-            if let date = detail?.publishedAt ?? summary?.publishedAt {
-                Text(EditorialDateFormatter.newsTime(date))
-                    .font(EditorialTheme.smallCaps)
+        return VStack(alignment: .leading, spacing: EditorialSpacing.content) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(source)
+                    .font(.subheadline.weight(.semibold))
+                if let date = detail?.publishedAt ?? summary?.publishedAt {
+                    Text(EditorialDateFormatter.timestamp(date))
+                        .font(.caption)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                }
+            }
+            Text(english(title?.en) ?? (detail == nil && summary == nil ? "Loading article…" : "English headline unavailable."))
+                .font(.title2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            if detail == nil || detail?.segments.isEmpty == true {
+                if let teaser = english(teaser?.en) {
+                    Text(teaser)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if detail?.segments.isEmpty == true {
+                    Text("English article text unavailable. Read the original for the source report.")
+                        .font(.body)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                }
+            }
+        }
+    }
+
+    private var commentsPresentation: NewsCommentsPresentation? {
+        commentsComplete.map { complete in
+            NewsCommentsPresentation(
+                loadedCount: comments.count,
+                totalCount: detail?.commentCount ?? summary?.commentCount ?? comments.count,
+                commentsComplete: complete,
+                nextCursor: commentsNextCursor
+            )
+        }
+    }
+
+    private var commentsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: EditorialSpacing.related) {
+                Label("Comments", systemImage: "text.bubble")
+                    .font(.headline)
+                if let count = detail?.commentCount ?? summary?.commentCount {
+                    Text("\(count)")
+                        .font(.subheadline.monospacedDigit())
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(EditorialTheme.accent)
+            .padding(.horizontal, EditorialSpacing.page)
+            .padding(.vertical, EditorialSpacing.content)
+            .background(EditorialTheme.subtleSurface)
+            .overlay(alignment: .top) {
+                Rectangle().fill(EditorialTheme.accent.opacity(0.5)).frame(height: 1)
+            }
+            .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: EditorialSpacing.inline) {
+                if let presentation = commentsPresentation, presentation.isPartial {
+                    Text(presentation.collectionLabel)
+                        .font(.caption)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                }
+            }
+            .padding(.horizontal, EditorialSpacing.page)
+            .padding(.vertical, EditorialSpacing.related)
+
+            NewsCommentThreadView(comments: comments)
+                .padding(.horizontal, EditorialSpacing.page)
+            VStack(alignment: .leading, spacing: 8) {
+                if let commentsError {
+                    Text("Unable to load comments")
+                        .font(.headline)
+                    Text(commentsError)
+                        .font(.subheadline)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                    Button("Retry comments") {
+                        Task { await loadComments(cursor: failedCommentsCursor) }
+                    }
+                    .frame(minHeight: 44)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(EditorialTheme.accent)
+                } else {
+                    if comments.isEmpty, let complete = commentsComplete {
+                        let totalCount = detail?.commentCount ?? summary?.commentCount ?? 0
+                        Text(complete && totalCount == 0 ? "No comments yet." : "Comments are not available yet.")
+                            .font(.body)
+                            .foregroundStyle(EditorialTheme.mutedInk)
+                    }
+                    if let cursor = commentsNextCursor {
+                        Button("Load more comments") { Task { await loadComments(cursor: cursor) } }
+                            .frame(minHeight: 44)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(EditorialTheme.accent)
+                    } else if commentsPresentation?.isPartial == true {
+                        Text("More comments may appear as collection finishes.")
+                            .font(.subheadline)
+                            .foregroundStyle(EditorialTheme.mutedInk)
+                        Button("Refresh comments") { Task { await loadComments() } }
+                            .frame(minHeight: 44)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(EditorialTheme.accent)
+                    }
+                }
             }
+            .disabled(isLoadingComments)
+            .padding(.horizontal, EditorialSpacing.page)
+            .padding(.top, EditorialSpacing.related)
         }
-        .padding(.top, 12)
-        BilingualText(
-            english: title?.en ?? "Loading…",
-            chinese: title?.zhHans,
-            role: .headline,
-            englishFont: .title2.bold()
-        )
-        if detail == nil || detail?.segments.isEmpty == true {
-            if let english = teaser?.en, !english.isEmpty {
-                Text(english)
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(EditorialTheme.ink.opacity(0.86))
-            }
-            if let chinese = teaser?.zhHans, !chinese.isEmpty {
-                Text(chinese)
-                    .font(.footnote)
-                    .foregroundStyle(EditorialTheme.mutedInk)
-            }
-        }
-        EditorialRule(weight: .strong)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, EditorialSpacing.section)
+        .background(EditorialTheme.paper)
+        .accessibilityIdentifier("article-discussion")
     }
 
     @ViewBuilder
     private var fallbackThumbnail: some View {
         if let url = mediaPresentation.fallbackThumbnailURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                case .failure:
-                    EmptyView()
-                case .empty:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, minHeight: 140)
-                @unknown default:
-                    EmptyView()
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .background(EditorialTheme.subtleSurface)
-            .overlay {
-                Rectangle()
-                    .stroke(EditorialTheme.rule.opacity(0.35), lineWidth: 0.5)
-            }
+            NewsRemoteImage(url: url, placeholderHeight: 140)
+                .frame(maxWidth: .infinity)
             .accessibilityLabel("Article thumbnail")
         }
     }
 
+    private func english(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
+
     private func load() async {
+        async let article: Void = loadArticle()
+        async let discussion: Void = loadComments()
+        _ = await (article, discussion)
+        guard !Task.isCancelled else { return }
+        await refreshProcessingMedia()
+    }
+
+    private func loadArticle() async {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
         do {
-            async let loadedDetail = model.v2Detail(id: articleID)
-            async let loadedComments = model.comments(id: articleID)
-            detail = try await loadedDetail
-            let commentEnvelope = try? await loadedComments
-            comments = commentEnvelope?.items ?? []
-            isLoading = false
-            await refreshProcessingMedia()
+            let loadedDetail = try await model.v2Detail(id: articleID)
+            try Task.checkCancellation()
+            detail = loadedDetail
         } catch {
-            isLoading = false
+            guard !Task.isCancelled else { return }
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Please try again."
+        }
+    }
+
+    private func loadComments(cursor: String? = nil) async {
+        guard !isLoadingComments else { return }
+        isLoadingComments = true
+        commentsError = nil
+        defer { isLoadingComments = false }
+        do {
+            let envelope = try await model.comments(id: articleID, cursor: cursor)
+            try Task.checkCancellation()
+            comments = NewsCommentsPresentation.appendingPage(envelope.items, to: cursor == nil ? [] : comments)
+            commentsComplete = envelope.commentsComplete
+            commentsNextCursor = envelope.nextCursor
+        } catch {
+            guard !Task.isCancelled else { return }
+            failedCommentsCursor = cursor
+            commentsError = comments.isEmpty
+                ? "The article is still available. Please try the discussion again."
+                : "Showing loaded comments. Please try again for the remaining discussion."
         }
     }
 
@@ -176,7 +294,9 @@ struct NewsDetailView: View {
             do {
                 try await Task.sleep(for: .seconds(2))
                 try Task.checkCancellation()
-                detail = try await model.v2Detail(id: articleID)
+                let refreshed = try await model.v2Detail(id: articleID)
+                try Task.checkCancellation()
+                detail = refreshed
             } catch {
                 return
             }

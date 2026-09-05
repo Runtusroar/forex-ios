@@ -186,6 +186,21 @@ final class ViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCalendarCachedTimestampDoesNotAdvanceOnFailedRefresh() async throws {
+        let stamp = Date(timeIntervalSince1970: 1_788_590_109)
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .now))
+        await api.setShouldFail(true)
+        let cache = ResponseCache(directory: temporaryDirectory())
+        try await cache.save(CalendarEnvelope(items: [], generatedAt: stamp), as: .calendar)
+        let model = CalendarViewModel(api: api, cache: cache)
+        XCTAssertNil(model.lastUpdatedAt)
+        await model.loadCachedData()
+        XCTAssertEqual(model.lastUpdatedAt, stamp)
+        await model.refresh()
+        XCTAssertEqual(model.lastUpdatedAt, stamp)
+    }
+
+    @MainActor
     func testCalendarFailurePreservesLastGoodRows() async throws {
         let event = sampleEvent(id: "calendar-1")
         let api = StubForexAPI(
@@ -199,7 +214,28 @@ final class ViewModelTests: XCTestCase {
         await model.refresh()
 
         XCTAssertEqual(model.events, [event])
+        XCTAssertEqual(model.lastUpdatedAt, event.updatedAt)
         XCTAssertEqual(model.errorMessage, "Unable to refresh. Showing saved data.")
+    }
+
+    @MainActor
+    func testNewsTimestampRetainsCachedDataAgeOnFailureAndChangesWithCommentFeed() async throws {
+        let cachedDate = Date(timeIntervalSince1970: 100)
+        let commentDate = Date(timeIntervalSince1970: 200)
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
+        let cache = ResponseCache(directory: temporaryDirectory())
+        try await cache.save(NewsArticlesEnvelope(items: [], nextCursor: nil, generatedAt: cachedDate), as: .news(section: .latest, impact: nil))
+        let model = NewsViewModel(api: api, cache: cache)
+        XCTAssertNil(model.lastUpdatedAt)
+        await model.loadCachedData()
+        XCTAssertEqual(model.lastUpdatedAt, cachedDate)
+        await api.setShouldFail(true)
+        await model.refresh()
+        XCTAssertEqual(model.lastUpdatedAt, cachedDate)
+        await api.setShouldFail(false)
+        await api.setLatestComments(NewsCommentsEnvelope(items: [], nextCursor: nil, commentsComplete: true, generatedAt: commentDate))
+        await model.select(.latestComments)
+        XCTAssertEqual(model.lastUpdatedAt, commentDate)
     }
 
     @MainActor
@@ -223,10 +259,13 @@ final class ViewModelTests: XCTestCase {
 
         await model.refresh()
         XCTAssertEqual(model.currentArticles.map(\.sourceID), ["latest"])
+        XCTAssertEqual(model.lastUpdatedAt, latest.publishedAt)
         await model.select(.technical)
         XCTAssertEqual(model.currentArticles.map(\.sourceID), ["technical"])
+        XCTAssertEqual(model.lastUpdatedAt, technical.publishedAt)
         await model.select(.latest)
         XCTAssertEqual(model.currentArticles.map(\.sourceID), ["latest"])
+        XCTAssertEqual(model.lastUpdatedAt, latest.publishedAt)
         XCTAssertEqual(model.sections.count, 8)
     }
 

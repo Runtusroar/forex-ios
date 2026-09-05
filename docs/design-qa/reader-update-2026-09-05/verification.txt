@@ -1,0 +1,16 @@
+BEFORE
+READER_HEIGHTS initial=8451.0 reverse=[8154.0, 8154.0, 8154.0, 9051.0, 9051.0, 10055.0]
+READER_MEDIA_REQUESTS ["/media/4": 3, "/media/32": 1, "/media/0": 3, "/media/24": 1, "/media/16": 1, "/media/8": 1]
+** TEST FAILED **
+
+MINIMAL FIX
+READER_HEIGHTS initial=11990.333333333332 reverse=[11990.333333333332, 11990.333333333332, 11990.333333333332, 11990.333333333332, 11990.333333333332, 11990.333333333332]
+READER_MEDIA_REQUESTS ["/media/32": 1, "/media/24": 1, "/media/28": 1, "/media/16": 1, "/media/4": 1, "/media/8": 1, "/media/12": 1, "/media/20": 1, "/media/0": 1]
+** TEST SUCCEEDED **
+
+FINAL
+READER_HEIGHTS initial=12118.0 reverse=[12118.0, 12118.0, 12118.0, 12118.0, 12118.0, 12118.0]
+READER_MEDIA_REQUESTS ["/media/8": 1, "/media/24": 1, "/media/16": 1, "/media/20": 1, "/media/12": 1, "/media/4": 1, "/media/0": 1, "/media/32": 1, "/media/28": 1]
+	 Executed 60 tests, with 0 failures (0 unexpected) in 3.960 (3.977) seconds
+	 Executed 60 tests, with 0 failures (0 unexpected) in 3.960 (3.978) seconds
+** TEST SUCCEEDED **
