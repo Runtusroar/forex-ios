@@ -42,3 +42,7 @@ An additional simulator test downloaded a real 18,536-byte public PNG through UR
 These are single-sample simulator measurements, not an end-to-end iPhone speed guarantee. The article scroll regression kept all six reverse-scroll heights at 11639.33 pt and requested all nine fixture images once.
 
 Logs: `/private/tmp/forex-image-cache-red.log`, `/private/tmp/forex-image-cache-verified.log`, `/private/tmp/forex-image-cache-live.log`, `/private/tmp/forex-image-cache-device.log`. Optional native capture and real-network probe files are archived here outside the regular test target. Installation status is recorded in verification.txt.
+
+## Merge review correction
+
+The merge review reproduced an image-validation edge case: a truncated PNG header can report a frame count without containing decodable pixels. Cache insertion and disk restoration now require successful ImageIO decoding, so an unusable response cannot prevent a subsequent healthy download. Two regression tests cover rejection/retry and recovery from a previously persisted truncated image; both failed against the earlier validation. This correction does not change the interface.

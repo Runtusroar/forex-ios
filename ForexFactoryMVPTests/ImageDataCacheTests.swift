@@ -66,6 +66,39 @@ final class ImageDataCacheTests: XCTestCase {
         XCTAssertEqual(result, png)
     }
 
+    func testTruncatedImageIsRejectedAndRetryFetchesHealthyImage() async throws {
+        let folder = directory()
+        let cache = ImageDataCache(directory: folder)
+        let truncated = Data(png.prefix(33))
+        do {
+            _ = try await cache.data(key: "image") { truncated }
+            XCTFail("Recognizable image headers without decodable pixels must be rejected")
+        } catch {}
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
+        let image = png
+        let result = try await cache.data(key: "image") { image }
+        XCTAssertEqual(result, png)
+        let restored = ImageDataCache(directory: folder)
+        let persisted = try await restored.data(key: "image") { throw APIError.server }
+        XCTAssertEqual(persisted, png)
+    }
+
+    func testDiskEntryWithTruncatedImageRedownloads() async throws {
+        let folder = directory()
+        let cache = ImageDataCache(directory: folder, memoryLimit: 0)
+        let source = ImageSource(data: png)
+        _ = try await cache.data(key: "image") { try await source.fetch() }
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil).first)
+        var entry = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        entry["data"] = Data(png.prefix(33)).base64EncodedString()
+        try JSONSerialization.data(withJSONObject: entry).write(to: file)
+        let restored = ImageDataCache(directory: folder)
+        let result = try await restored.data(key: "image") { try await source.fetch() }
+        XCTAssertEqual(result, png)
+        let requests = await source.requests
+        XCTAssertEqual(requests, 2)
+    }
+
     func testDifferentCredentialNamespacesNeverShareContent() async throws {
         let cache = ImageDataCache(directory: directory())
         let source = ImageSource(data: png)

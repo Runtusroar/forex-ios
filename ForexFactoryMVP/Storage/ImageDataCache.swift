@@ -44,7 +44,8 @@ actor ImageDataCache {
         }
         let file = directory.appending(path: id)
         if let encoded = try? Data(contentsOf: file) {
-            if let entry = try? JSONDecoder().decode(Entry.self, from: encoded), entry.expiresAt > Date() {
+            if let entry = try? JSONDecoder().decode(Entry.self, from: encoded),
+               entry.expiresAt > Date(), Self.isDecodableImage(entry.data) {
                 remember(entry, id: id)
                 try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
                 return entry.data
@@ -55,8 +56,7 @@ actor ImageDataCache {
         // View cancellation does not cancel a download another visible row may share.
         let download = Task {
             let data = try await fetch()
-            guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-                  CGImageSourceGetCount(source) > 0 else { throw APIError.invalidResponse }
+            guard Self.isDecodableImage(data) else { throw APIError.invalidResponse }
             return data
         }
         pending[id] = download
@@ -111,6 +111,12 @@ actor ImageDataCache {
         } catch {
             // Cache I/O is best effort; a downloaded image remains usable.
         }
+    }
+
+    private nonisolated static func isDecodableImage(_ data: Data) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+        // A recognized header can report an image count even when its pixels are missing.
+        return CGImageSourceCreateImageAtIndex(source, 0, nil) != nil
     }
 
     private nonisolated static func digest(_ value: String) -> String {
