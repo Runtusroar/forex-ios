@@ -2,6 +2,24 @@ import XCTest
 @testable import ForexFactoryMVP
 
 final class APIModelsTests: XCTestCase {
+    func testNewsEnvelopeUsesSourceCollectionTimeAndFallsBackForLegacyServer() throws {
+        let currentJSON = #"{"items":[],"next_cursor":null,"generated_at":"2026-09-06T01:00:00Z","source_updated_at":"2026-09-06T00:55:00Z"}"#
+        let legacyJSON = #"{"items":[],"next_cursor":null,"generated_at":"2026-09-06T01:00:00Z"}"#
+
+        let current = try JSONDecoder.api.decode(
+            NewsArticlesEnvelope.self, from: Data(currentJSON.utf8)
+        )
+        let legacy = try JSONDecoder.api.decode(
+            NewsArticlesEnvelope.self, from: Data(legacyJSON.utf8)
+        )
+
+        XCTAssertEqual(
+            current.effectiveUpdatedAt,
+            ISO8601DateFormatter().date(from: "2026-09-06T00:55:00Z")
+        )
+        XCTAssertEqual(legacy.effectiveUpdatedAt, legacy.generatedAt)
+    }
+
     func testCalendarEventDecodesWithoutChineseTranslation() throws {
         let json = #"{"source_id":"1","event_at":"2026-09-01T12:00:00Z","currency":"USD","impact":"high","title_en":"ISM Manufacturing PMI","title_zh":null,"actual":"51.2","forecast":"50.5","previous":"49.8","updated_at":"2026-09-01T12:01:00Z"}"#
         let event = try JSONDecoder.api.decode(CalendarEvent.self, from: Data(json.utf8))

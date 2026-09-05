@@ -7,6 +7,15 @@ final class EditorialThemeTests: XCTestCase {
         XCTAssertEqual(EditorialDateFormatter.timestamp(date), "2026-09-05 00:05:09 UTC+8")
     }
 
+    func testDelayedLastUpdatedLabelStaysOnTheTimestampLine() throws {
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-04T16:05:09Z"))
+
+        XCTAssertEqual(
+            LastUpdatedText.label(date: date, isDelayed: true),
+            "Last updated 2026-09-05 00:05:09 UTC+8 · Delayed"
+        )
+    }
+
     func testPublicationDateUsesSameUTCPlusEightDayAsCalendar() throws {
         let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-04T16:30:00Z"))
         XCTAssertEqual(EditorialDateFormatter.publicationDate(date), "SEP 5, 2026")

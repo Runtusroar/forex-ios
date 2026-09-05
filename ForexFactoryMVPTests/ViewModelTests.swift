@@ -239,6 +239,33 @@ final class ViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testNewsUsesSourceCollectionTimeAndMarksOldSuccessfulResponseDelayed() async {
+        let responseTime = Date(timeIntervalSince1970: 1_000)
+        let sourceTime = Date(timeIntervalSince1970: 100)
+        let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
+        await api.setArticlePage(
+            section: .latest,
+            envelope: NewsArticlesEnvelope(
+                items: [],
+                nextCursor: nil,
+                generatedAt: responseTime,
+                sourceUpdatedAt: sourceTime
+            )
+        )
+        let model = NewsViewModel(
+            api: api,
+            cache: ResponseCache(directory: temporaryDirectory()),
+            now: { Date(timeIntervalSince1970: 500) }
+        )
+
+        await model.refresh()
+
+        XCTAssertEqual(model.lastUpdatedAt, sourceTime)
+        XCTAssertTrue(model.isDelayed)
+        XCTAssertNil(model.staleSince)
+    }
+
+    @MainActor
     func testNewsSectionsKeepIndependentVisibleRows() async throws {
         let api = StubForexAPI(calendar: CalendarEnvelope(items: [], generatedAt: .distantPast))
         let latest = sampleArticle(id: "latest", date: 200)

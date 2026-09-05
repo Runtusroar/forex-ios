@@ -26,6 +26,7 @@ final class NewsViewModel {
     private let makeAPI: @MainActor @Sendable () throws -> any ForexAPI
     private let cache: ResponseCache
     private let refreshLoop: RefreshLoop
+    private let now: @MainActor @Sendable () -> Date
     private var activationTask: Task<Void, Never>?
     private var articleStates: [NewsContentKey: ArticlePageState] = [:]
     private var commentState = CommentPageState()
@@ -38,6 +39,7 @@ final class NewsViewModel {
     var isLoadingMore = false
     var staleSince: Date?
     var errorMessage: String?
+    var isDelayed = false
 
     var lastUpdatedAt: Date? {
         selectedSection == .latestComments ? commentState.generatedAt : articleStates[currentKey]?.generatedAt
@@ -62,17 +64,20 @@ final class NewsViewModel {
     init(
         api: any ForexAPI,
         cache: ResponseCache,
-        refreshLoop: RefreshLoop = RefreshLoop()
+        refreshLoop: RefreshLoop = RefreshLoop(),
+        now: @escaping @MainActor @Sendable () -> Date = Date.init
     ) {
         makeAPI = { api }
         self.cache = cache
         self.refreshLoop = refreshLoop
+        self.now = now
     }
 
     init(
         settings: AppSettings,
         cache: ResponseCache,
-        refreshLoop: RefreshLoop = RefreshLoop()
+        refreshLoop: RefreshLoop = RefreshLoop(),
+        now: @escaping @MainActor @Sendable () -> Date = Date.init
     ) {
         makeAPI = {
             let credentials = try settings.credentials()
@@ -80,6 +85,7 @@ final class NewsViewModel {
         }
         self.cache = cache
         self.refreshLoop = refreshLoop
+        self.now = now
     }
 
     func activate() {
@@ -144,7 +150,7 @@ final class NewsViewModel {
                 commentState = CommentPageState(
                     items: envelope.items,
                     nextCursor: envelope.nextCursor,
-                    generatedAt: envelope.generatedAt,
+                    generatedAt: envelope.effectiveUpdatedAt,
                     isLoaded: true
                 )
                 try await cache.save(envelope, as: .news(section: section, impact: nil))
@@ -159,13 +165,14 @@ final class NewsViewModel {
                 articleStates[key] = ArticlePageState(
                     items: envelope.items,
                     nextCursor: envelope.nextCursor,
-                    generatedAt: envelope.generatedAt,
+                    generatedAt: envelope.effectiveUpdatedAt,
                     isLoaded: true
                 )
                 try await cache.save(envelope, as: .news(section: section, impact: impact))
             }
             staleSince = nil
             errorMessage = nil
+            updateDelayedState()
         } catch {
             let hasRows = section == .latestComments
                 ? !commentState.items.isEmpty
@@ -199,7 +206,7 @@ final class NewsViewModel {
                     id: \NewsComment.commentID
                 )
                 commentState.nextCursor = envelope.nextCursor
-                commentState.generatedAt = envelope.generatedAt
+                commentState.generatedAt = envelope.effectiveUpdatedAt
             } else {
                 let envelope = try await api.news(
                     section: section,
@@ -215,10 +222,11 @@ final class NewsViewModel {
                     id: \NewsArticleSummary.sourceID
                 )
                 state.nextCursor = envelope.nextCursor
-                state.generatedAt = envelope.generatedAt
+                state.generatedAt = envelope.effectiveUpdatedAt
                 articleStates[key] = state
             }
             errorMessage = nil
+            updateDelayedState()
         } catch {
             errorMessage = "Unable to load more. Please try again."
         }
@@ -250,10 +258,11 @@ final class NewsViewModel {
             commentState = CommentPageState(
                 items: envelope.items,
                 nextCursor: envelope.nextCursor,
-                generatedAt: envelope.generatedAt,
+                generatedAt: envelope.effectiveUpdatedAt,
                 isLoaded: true
             )
-            staleSince = envelope.generatedAt
+            staleSince = envelope.effectiveUpdatedAt
+            updateDelayedState()
         } else {
             guard articleStates[key]?.isLoaded != true,
                   let envelope = try? await cache.load(
@@ -264,10 +273,11 @@ final class NewsViewModel {
             articleStates[key] = ArticlePageState(
                 items: envelope.items,
                 nextCursor: envelope.nextCursor,
-                generatedAt: envelope.generatedAt,
+                generatedAt: envelope.effectiveUpdatedAt,
                 isLoaded: true
             )
-            staleSince = envelope.generatedAt
+            staleSince = envelope.effectiveUpdatedAt
+            updateDelayedState()
         }
     }
 
@@ -285,6 +295,15 @@ final class NewsViewModel {
             ? commentState.generatedAt
             : articleStates[currentKey]?.generatedAt
         errorMessage = nil
+        updateDelayedState()
+    }
+
+    private func updateDelayedState() {
+        guard let lastUpdatedAt else {
+            isDelayed = false
+            return
+        }
+        isDelayed = now().timeIntervalSince(lastUpdatedAt) > 300
     }
 
     private static func appendingUnique<Item, ID: Hashable>(

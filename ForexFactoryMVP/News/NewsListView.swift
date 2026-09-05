@@ -108,6 +108,7 @@ struct NewsListView: View {
         VStack(spacing: 0) {
             PageHeader(title: "News", subtitle: "", isRefreshing: model.isRefreshing,
                        updatedAt: model.lastUpdatedAt, showsUpdateTime: true,
+                       isDelayed: model.isDelayed,
                        refresh: { Task { await model.refresh() } },
                        filterTitle: model.selectedSection == .latestComments ? nil : "\(impactFilterLabel) impact",
                        filterAction: {

@@ -6,6 +6,7 @@ struct PageHeader: View {
     var isRefreshing = false
     var updatedAt: Date? = nil
     var showsUpdateTime = false
+    var isDelayed = false
     var refresh: (() -> Void)? = nil
     var date: Date? = Date()
     var filterTitle: String? = nil
@@ -23,7 +24,7 @@ struct PageHeader: View {
             if showsUpdateTime {
                 if let refresh {
                     Button(action: refresh) {
-                        LastUpdatedText(date: updatedAt)
+                        LastUpdatedText(date: updatedAt, isDelayed: isDelayed)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                             .contentShape(Rectangle())
                     }
@@ -31,7 +32,7 @@ struct PageHeader: View {
                     .disabled(isRefreshing)
                     .accessibilityHint("Refresh this page")
                 } else {
-                    LastUpdatedText(date: updatedAt)
+                    LastUpdatedText(date: updatedAt, isDelayed: isDelayed)
                 }
             }
         }
@@ -103,11 +104,17 @@ struct FlatActionStyle: ButtonStyle {
 
 struct LastUpdatedText: View {
     let date: Date?
+    var isDelayed = false
+
+    nonisolated static func label(date: Date?, isDelayed: Bool) -> String {
+        let timestamp = date.map(EditorialDateFormatter.timestamp) ?? "— · UTC+8"
+        return "Last updated \(timestamp)" + (isDelayed ? " · Delayed" : "")
+    }
 
     var body: some View {
-        Text(date.map { "Last updated " + EditorialDateFormatter.timestamp($0) } ?? "Last updated — · UTC+8")
+        Text(Self.label(date: date, isDelayed: isDelayed))
             .font(.caption.monospacedDigit())
-            .foregroundStyle(EditorialTheme.mutedInk)
+            .foregroundStyle(isDelayed ? EditorialTheme.accent : EditorialTheme.mutedInk)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("last-updated")
     }

@@ -391,11 +391,27 @@ struct CursorEnvelope<Item: Codable & Equatable & Sendable>: Codable, Equatable,
     let items: [Item]
     let nextCursor: String?
     let generatedAt: Date
+    let sourceUpdatedAt: Date?
+
+    var effectiveUpdatedAt: Date { sourceUpdatedAt ?? generatedAt }
+
+    init(
+        items: [Item],
+        nextCursor: String?,
+        generatedAt: Date,
+        sourceUpdatedAt: Date? = nil
+    ) {
+        self.items = items
+        self.nextCursor = nextCursor
+        self.generatedAt = generatedAt
+        self.sourceUpdatedAt = sourceUpdatedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case items
         case nextCursor = "next_cursor"
         case generatedAt = "generated_at"
+        case sourceUpdatedAt = "source_updated_at"
     }
 }
 
@@ -414,12 +430,30 @@ struct NewsCommentsEnvelope: Codable, Equatable, Sendable {
     let nextCursor: String?
     let commentsComplete: Bool
     let generatedAt: Date
+    let sourceUpdatedAt: Date?
+
+    var effectiveUpdatedAt: Date { sourceUpdatedAt ?? generatedAt }
+
+    init(
+        items: [NewsComment],
+        nextCursor: String?,
+        commentsComplete: Bool,
+        generatedAt: Date,
+        sourceUpdatedAt: Date? = nil
+    ) {
+        self.items = items
+        self.nextCursor = nextCursor
+        self.commentsComplete = commentsComplete
+        self.generatedAt = generatedAt
+        self.sourceUpdatedAt = sourceUpdatedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case items
         case nextCursor = "next_cursor"
         case commentsComplete = "comments_complete"
         case generatedAt = "generated_at"
+        case sourceUpdatedAt = "source_updated_at"
     }
 }
 
