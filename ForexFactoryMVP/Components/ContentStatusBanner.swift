@@ -10,7 +10,7 @@ struct ContentStatusBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     if let message { Text(message) }
                     if let staleSince {
-                        Text("Saved \(staleSince.formatted(date: .abbreviated, time: .shortened))")
+                        Text("Cached data from \(EditorialDateFormatter.publicationDate(staleSince)) \(EditorialDateFormatter.newsTime(staleSince)) \(EditorialDateFormatter.utcPlusEightLabel)")
                             .font(EditorialTheme.metadata)
                             .foregroundStyle(EditorialTheme.mutedInk)
                     }

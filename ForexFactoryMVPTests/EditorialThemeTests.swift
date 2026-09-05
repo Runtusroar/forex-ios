@@ -2,6 +2,21 @@ import XCTest
 @testable import ForexFactoryMVP
 
 final class EditorialThemeTests: XCTestCase {
+    func testPublicationDateUsesSameUTCPlusEightDayAsCalendar() throws {
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-04T16:30:00Z"))
+        XCTAssertEqual(EditorialDateFormatter.publicationDate(date), "SEP 5, 2026")
+        XCTAssertEqual(EditorialDateFormatter.calendarTime(date), "00:30")
+        XCTAssertEqual(EditorialDateFormatter.calendarDayLabel(date), "SATURDAY, SEP 5")
+    }
+
+    func testUTCAndOffsetAPIValuesDecodeToTheSameInstant() throws {
+        struct Timestamp: Decodable { let time: Date }
+        let utc = try JSONDecoder.api.decode(Timestamp.self, from: Data(#"{"time":"2026-09-04T16:30:00.123456Z"}"#.utf8))
+        let offset = try JSONDecoder.api.decode(Timestamp.self, from: Data(#"{"time":"2026-09-05T00:30:00.123456+08:00"}"#.utf8))
+        XCTAssertEqual(utc.time, offset.time)
+        XCTAssertEqual(EditorialDateFormatter.newsTime(offset.time), "00:30")
+    }
+
     func testPublicationDateUsesUppercaseAbbreviatedEditorialFormat() {
         let value = EditorialDateFormatter.publicationDate(
             Date(timeIntervalSince1970: 1_788_523_200),

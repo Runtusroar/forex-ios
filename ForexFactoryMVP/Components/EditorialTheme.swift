@@ -85,9 +85,9 @@ enum EditorialDateFormatter {
 
     static func publicationDate(
         _ date: Date,
-        calendar: Calendar = .current,
+        calendar: Calendar = Calendar(identifier: .gregorian),
         locale: Locale = Locale(identifier: "en_US_POSIX"),
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)!
     ) -> String {
         let formatter = DateFormatter()
         formatter.calendar = calendar
