@@ -5,202 +5,152 @@ struct ContractsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                EditorialTheme.paper.ignoresSafeArea()
-                VStack(spacing: 0) {
-                    ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
-                    content
+            VStack(spacing: 0) {
+                ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
+                if model.contracts.isEmpty {
+                    ScrollView {
+                        contractsHeader
+                        if !model.isRefreshing {
+                            ContentUnavailableView(
+                                model.selectedMarket == .traditional ? "No TradFi contracts" : "No contracts available",
+                                systemImage: "chart.line.uptrend.xyaxis",
+                                description: Text("Tap the update time to refresh, or check your connection in Settings.")
+                            )
+                            .padding(.top, EditorialSpacing.section)
+                        }
+                    }
+                } else {
+                    List {
+                        contractsHeader
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                        HStack {
+                            Text("Instrument")
+                            Spacer()
+                            Text("Last price / 24h")
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, EditorialSpacing.related)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(EditorialTheme.subtleSurface)
+                        .listRowSeparator(.hidden)
+
+                        ForEach(Array(model.contracts.enumerated()), id: \.element.id) { index, contract in
+                            ContractRow(rank: index + 1, contract: contract)
+                                .listRowInsets(EdgeInsets(top: EditorialSpacing.row, leading: 20, bottom: EditorialSpacing.row, trailing: 20))
+                                .listRowSeparatorTint(EditorialTheme.rule)
+                                .listRowBackground(EditorialTheme.surface)
+                                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                                .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .contentMargins(.top, 0, for: .scrollContent)
+                    .scrollContentBackground(.hidden)
                 }
             }
+            .background(EditorialTheme.paper.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
     }
 
-    @ViewBuilder
-    private var content: some View {
-        if model.contracts.isEmpty {
-            ScrollView {
-                contractsHeader
-                EmptyContractsView(marketType: model.selectedMarket)
-                    .padding(.top, 44)
-                    .padding(.horizontal, 28)
-            }
-            .background(EditorialTheme.paper)
-            .refreshable { await model.refresh() }
-        } else {
-            List {
-                contractsHeader
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(EditorialTheme.paper)
-
-                ForEach(Array(model.contracts.enumerated()), id: \.element.id) { index, contract in
-                    ContractRow(rank: index + 1, contract: contract)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(EditorialTheme.paper)
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(EditorialTheme.paper)
-            .refreshable { await model.refresh() }
-        }
-    }
-
     private var contractsHeader: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            EditorialMasthead(section: "Contracts")
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(updatedLabel(model.lastUpdatedAt))
-                    .font(EditorialTheme.smallCaps)
-                    .tracking(0.8)
-                    .foregroundStyle(EditorialTheme.accent)
-                Spacer()
-                Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
-                    .font(EditorialTheme.smallCaps)
-                    .tracking(0.8)
-                    .foregroundStyle(EditorialTheme.accent)
-            }
-            Text("BINANCE FUTURES · TOP 20 BY 24H TURNOVER")
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.8)
-                .foregroundStyle(EditorialTheme.mutedInk)
-            ContractMarketPicker(model: model)
-                .padding(.top, 4)
-            EditorialRule(weight: .strong)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .background(EditorialTheme.paper)
-    }
-
-    private func updatedLabel(_ date: Date?) -> String {
-        guard let date else { return "UPDATED · --:--:--" }
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 8 * 60 * 60)
-        formatter.dateFormat = "HH:mm:ss"
-        return "UPDATED · \(formatter.string(from: date))"
-    }
-}
-
-private struct ContractMarketPicker: View {
-    @Bindable var model: ContractsViewModel
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .bottom, spacing: 28) {
-                ForEach(ContractMarketFilter.allCases) { marketType in
-                    Button {
-                        Task { await model.select(marketType) }
-                    } label: {
-                        VStack(spacing: 6) {
-                            Text(marketType.title)
-                                .font(.system(.subheadline, design: .default, weight: .semibold))
-                            Rectangle()
-                                .fill(
-                                    model.selectedMarket == marketType
-                                        ? EditorialTheme.accent
-                                        : Color.clear
-                                )
-                                .frame(height: 3)
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(title: "Contracts", subtitle: "Binance Futures · Top 20 by 24h turnover",
+                       isRefreshing: model.isRefreshing, updatedAt: model.lastUpdatedAt,
+                       showsUpdateTime: true, refresh: { Task { await model.refresh() } })
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: EditorialSpacing.section) {
+                    ForEach(ContractMarketFilter.allCases) { market in
+                        CategoryTab(title: market.title, isSelected: model.selectedMarket == market) {
+                            Task { await model.select(market) }
                         }
-                        .foregroundStyle(
-                            model.selectedMarket == marketType
-                                ? EditorialTheme.accent
-                                : EditorialTheme.ink
-                        )
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .frame(minHeight: 38)
-                    .accessibilityValue(model.selectedMarket == marketType ? "Selected" : "")
                 }
+                .padding(.horizontal, 20)
             }
         }
         .background(EditorialTheme.paper)
     }
+
 }
 
-private struct ContractRow: View {
+struct ContractRow: View {
     let rank: Int
     let contract: BinanceFuturesContract
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("#\(rank)")
-                    .font(EditorialTheme.smallCaps.monospacedDigit())
-                    .tracking(0.5)
-                    .foregroundStyle(EditorialTheme.accent)
-                    .frame(width: 34, alignment: .leading)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(contract.symbol)
-                        .font(EditorialTheme.headline(.headline, weight: .semibold))
-                    ContractMarketTag(text: contract.marketDisplayLabel)
+        VStack(alignment: .leading, spacing: EditorialSpacing.content) {
+            summaryLayout {
+                HStack(alignment: .top, spacing: 10) {
+                    Text("\(rank)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                        .frame(minWidth: 18, alignment: .leading)
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: EditorialSpacing.inline) {
+                        Text(contract.symbol)
+                            .font(.body.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(contract.marketDisplayLabel)
+                            .font(.caption)
+                            .foregroundStyle(EditorialTheme.mutedInk)
+                    }
                 }
-                Spacer(minLength: 12)
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(contract.lastPrice, format: .number.precision(.significantDigits(2...8)))
-                        .font(.headline.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(EditorialTheme.ink)
-                    PercentText(value: contract.priceChangePercent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: EditorialSpacing.inline) {
+                    Text(price(contract.lastPrice))
+                        .font(.body.monospacedDigit().weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(signedChange)
+                        .font(.subheadline.monospacedDigit().weight(.medium))
+                        .foregroundStyle(contract.priceChangePercent >= 0 ? EditorialTheme.positive : EditorialTheme.negative)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Last price \(price(contract.lastPrice)) \(contract.quoteAsset), 24 hour change \(signedChange)")
+            }
+            VStack(spacing: EditorialSpacing.related) {
+                metricLayout {
+                    MetricCell(label: "24h turnover", value: "\(abbreviated(contract.quoteVolume)) \(contract.quoteAsset)")
+                    MetricCell(label: "24h volume", value: "\(abbreviated(contract.volume)) \(contract.baseAsset)")
+                    MetricCell(label: "Amplitude", value: contract.volatilityPercent.map { "\($0.formatted(.number.precision(.fractionLength(2))))%" } ?? "—")
+                }
+                metricLayout {
+                    MetricCell(label: "24h high", value: price(contract.highPrice))
+                    MetricCell(label: "24h low", value: price(contract.lowPrice))
+                    MetricCell(label: "Trades", value: abbreviated(Double(contract.count)))
                 }
             }
-            HStack(spacing: 0) {
-                MetricCell(label: "24h Turnover", value: abbreviated(contract.quoteVolume))
-                MetricCell(label: "24h Volume", value: abbreviated(contract.volume))
-                MetricCell(label: "Amplitude", value: percent(contract.volatilityPercent))
-            }
-            HStack(spacing: 0) {
-                MetricCell(label: "High", value: price(contract.highPrice))
-                MetricCell(label: "Low", value: price(contract.lowPrice))
-                MetricCell(label: "Trades", value: abbreviated(Double(contract.count)))
-            }
-            EditorialRule()
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .accessibilityElement(children: .combine)
+        .foregroundStyle(EditorialTheme.ink)
+    }
+
+    private var summaryLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+    }
+
+    private var metricLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
+    }
+
+    private var signedChange: String {
+        let value = contract.priceChangePercent
+        return "\(value >= 0 ? "+" : "")\(value.formatted(.number.precision(.fractionLength(2))))%"
     }
 
     private func price(_ value: Double) -> String {
         value.formatted(.number.precision(.significantDigits(2...8)))
     }
 
-    private func percent(_ value: Double?) -> String {
-        guard let value else { return "-" }
-        return "\(value.formatted(.number.precision(.fractionLength(2))))%"
-    }
-
     private func abbreviated(_ value: Double) -> String {
         value.formatted(.number.notation(.compactName).precision(.fractionLength(1)))
-    }
-}
-
-private struct ContractMarketTag: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(EditorialTheme.smallCaps)
-            .tracking(0.6)
-            .foregroundStyle(EditorialTheme.accent)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .accessibilityLabel("Contract type \(text)")
-    }
-}
-
-private struct PercentText: View {
-    let value: Double
-
-    var body: some View {
-        Text("\(value.formatted(.number.precision(.fractionLength(2))))%")
-            .font(.caption.monospacedDigit().weight(.semibold))
-            .foregroundStyle(value >= 0 ? Color(red: 0.08, green: 0.36, blue: 0.27) : EditorialTheme.accent)
     }
 }
 
@@ -209,63 +159,14 @@ private struct MetricCell: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.5)
-                .foregroundStyle(EditorialTheme.mutedInk)
+        VStack(alignment: .leading, spacing: EditorialSpacing.inline) {
+            Text(label).font(.caption).foregroundStyle(EditorialTheme.mutedInk)
             Text(value)
-                .font(.caption.monospacedDigit().weight(.medium))
+                .font(.subheadline.monospacedDigit())
                 .foregroundStyle(EditorialTheme.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct EmptyContractsView: View {
-    let marketType: ContractMarketFilter
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 12) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(EditorialTheme.accent)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NO CONTRACTS")
-                        .font(EditorialTheme.smallCaps)
-                        .tracking(1.1)
-                        .foregroundStyle(EditorialTheme.accent)
-                    Text(title)
-                        .font(EditorialTheme.headline(.title2))
-                        .foregroundStyle(EditorialTheme.ink)
-                }
-            }
-            EditorialRule(weight: .strong)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(EditorialTheme.mutedInk)
-                .lineSpacing(4)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var title: String {
-        switch marketType {
-        case .traditional: "No TradFi contracts"
-        case .crypto: "Crypto market board unavailable"
-        case .all: "Market board unavailable"
-        }
-    }
-
-    private var message: String {
-        switch marketType {
-        case .traditional:
-            "No TradFi contracts were returned by Binance for this refresh. Pull to refresh or check the server connection."
-        case .crypto, .all:
-            "Pull to refresh, or check the API URL and key in Settings."
-        }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -10,56 +10,59 @@ struct EditorialRule: View {
     var weight: EditorialRuleWeight = .hairline
 
     var body: some View {
-        switch weight {
-        case .hairline:
-            Rectangle()
-                .fill(EditorialTheme.rule)
-                .frame(height: 0.5)
-        case .strong:
-            Rectangle()
-                .fill(EditorialTheme.ink)
-                .frame(height: 2)
-        case .double:
-            VStack(spacing: 3) {
-                Rectangle()
-                    .fill(EditorialTheme.ink)
-                    .frame(height: 3)
-                Rectangle()
-                    .fill(EditorialTheme.ink)
-                    .frame(height: 1)
-            }
-        }
+        Rectangle()
+            .fill(EditorialTheme.rule)
+            .frame(height: weight == .hairline ? 0.5 : 1)
+            .accessibilityHidden(true)
     }
 }
 
 struct EditorialMasthead: View {
     let section: String
-    var kicker = "FOREX FACTORY · PRIVATE EDITION"
     var date: Date? = Date()
-
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 58
+    var filterTitle: String? = nil
+    var filterAction: (() -> Void)? = nil
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(kicker)
-                    .font(EditorialTheme.smallCaps)
-                    .tracking(0.7)
-                Spacer(minLength: 8)
+        VStack(alignment: .leading, spacing: EditorialSpacing.inline) {
+            let headingLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: EditorialSpacing.inline))
+                : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: EditorialSpacing.related))
+            headingLayout {
+                Text(section)
+                    .font(.title.weight(.bold))
+                    .tracking(-0.4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                if let filterTitle, let filterAction {
+                    Button(action: filterAction) {
+                        HStack(spacing: 6) {
+                            Text(filterTitle)
+                            Image(systemName: "chevron.down").font(.caption2.weight(.bold))
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(EditorialTheme.accent)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 44)
+                        .background(EditorialTheme.subtleSurface)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Filter by impact")
+                    .accessibilityValue(filterTitle)
+                }
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 if let date {
                     Text(EditorialDateFormatter.publicationDate(date))
                         .font(EditorialTheme.smallCaps)
-                        .foregroundStyle(EditorialTheme.accent)
+                        .foregroundStyle(EditorialTheme.mutedInk)
+                        .fixedSize()
+                        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .trailing)
                 }
             }
-            Text(section)
-                .font(.system(size: titleSize, weight: .regular, design: .serif))
-                .tracking(-1.2)
-                .minimumScaleFactor(0.72)
-                .lineLimit(1)
-            EditorialRule(weight: .double)
+
         }
         .foregroundStyle(EditorialTheme.ink)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }

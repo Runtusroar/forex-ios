@@ -32,7 +32,7 @@ struct NewsSegmentPresentationModel: Equatable, Sendable {
             externalAction = nil
         }
 
-        guard let english = segment.text.en, !english.isEmpty else {
+        guard let english = segment.text.en?.trimmingCharacters(in: .whitespacesAndNewlines), !english.isEmpty else {
             attributedEnglish = nil
             return
         }
@@ -52,138 +52,103 @@ struct NewsSegmentView: View {
     let segment: NewsSegment
     let model: NewsViewModel
 
-    @State private var browserDestination: SafariDestination?
+    @State private var browserDestination: NewsSourceDestination?
 
     private var presentation: NewsSegmentPresentationModel {
         NewsSegmentPresentationModel(segment: segment)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             if segment.authorName != nil || segment.publishedAt != nil {
-                HStack {
+                VStack(alignment: .leading, spacing: 4) {
                     if let author = segment.authorName {
-                        Text(author.uppercased())
-                            .font(EditorialTheme.smallCaps)
-                            .tracking(0.5)
+                        Text(author)
+                            .font(.subheadline.weight(.semibold))
                         if let handle = segment.authorHandle {
                             Text(handle)
-                                .font(EditorialTheme.metadata)
+                                .font(.caption)
                                 .foregroundStyle(EditorialTheme.mutedInk)
                         }
                     }
-                    Spacer()
                     if let date = segment.publishedAt {
-                        Text(EditorialDateFormatter.newsTime(date))
-                            .font(EditorialTheme.metadata)
+                        Text("\(EditorialDateFormatter.publicationDate(date)) · \(EditorialDateFormatter.newsTime(date)) UTC+8")
+                            .font(.caption)
                             .foregroundStyle(EditorialTheme.mutedInk)
                     }
                 }
             }
-            if segment.type == .quote {
-                quoteText
-            } else {
-                bilingualText
-            }
+            englishText
             ForEach(presentation.visibleMedia) { media in
                 NewsMediaView(media: media, model: model)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         if let url = presentation.primaryExternalURL {
-                            browserDestination = SafariDestination(url: url)
+                            browserDestination = NewsSourceDestination(url: url)
                         }
                     }
             }
             if let action = presentation.externalAction {
-                Button(action.label) {
-                    browserDestination = SafariDestination(url: action.url)
-                }
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.5)
-                .foregroundStyle(EditorialTheme.accent)
-                .underline()
-                .frame(minHeight: 44, alignment: .leading)
+                sourceButton(action.label, url: action.url)
             } else if segment.links.isEmpty,
                       let sourceURL = segment.sourceURL {
-                Button("VIEW SOURCE") {
-                    browserDestination = SafariDestination(url: sourceURL)
-                }
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.5)
-                .foregroundStyle(EditorialTheme.accent)
-                .underline()
-                .frame(minHeight: 44, alignment: .leading)
+                sourceButton("View source", url: sourceURL)
             }
         }
-        .padding(.leading, segment.type == .quote || segment.type == .social ? 12 : 0)
+        .foregroundStyle(EditorialTheme.ink)
+        .padding(.leading, segment.type == .quote || segment.type == .social ? 16 : 0)
         .overlay(alignment: .leading) {
             if segment.type == .quote || segment.type == .social {
                 Rectangle()
-                    .fill(EditorialTheme.accent)
-                    .frame(width: 3)
+                    .fill(EditorialTheme.rule)
+                    .frame(width: 2)
             }
         }
         .sheet(item: $browserDestination) { destination in
-            InAppBrowserView(url: destination.url)
+            NewsSourceBrowser(url: destination.url)
                 .ignoresSafeArea()
         }
     }
 
     @ViewBuilder
-    private var bilingualText: some View {
+    private var englishText: some View {
         if let english = presentation.attributedEnglish {
             Text(english)
-                .font(.system(.body, design: segment.type == .article ? .serif : .default))
+                .font(.body)
                 .foregroundStyle(EditorialTheme.ink)
-                .lineSpacing(4)
+                .lineSpacing(6)
                 .lineLimit(presentation.lineLimit)
+                .fixedSize(horizontal: false, vertical: true)
                 .environment(\.openURL, OpenURLAction { url in
-                    browserDestination = SafariDestination(url: url)
+                    browserDestination = NewsSourceDestination(url: url)
                     return .handled
                 })
-        }
-        if let chinese = segment.text.zhHans, !chinese.isEmpty {
-            Text(chinese)
+        } else if segment.type == .article || segment.type == .quote || segment.type == .social {
+            Text("English text unavailable.")
                 .font(.body)
                 .foregroundStyle(EditorialTheme.mutedInk)
-                .lineSpacing(3)
-                .lineLimit(presentation.lineLimit)
         }
     }
 
-    private var quoteText: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Rectangle().fill(EditorialTheme.accent).frame(width: 3)
-            VStack(alignment: .leading, spacing: 7) {
-                if let english = presentation.attributedEnglish {
-                    Text(english)
-                        .italic()
-                        .foregroundStyle(EditorialTheme.ink)
-                        .lineSpacing(4)
-                        .lineLimit(presentation.lineLimit)
-                        .environment(\.openURL, OpenURLAction { url in
-                            browserDestination = SafariDestination(url: url)
-                            return .handled
-                        })
-                }
-                if let chinese = segment.text.zhHans, !chinese.isEmpty {
-                    Text(chinese)
-                        .italic()
-                        .foregroundStyle(EditorialTheme.mutedInk)
-                        .lineSpacing(3)
-                        .lineLimit(presentation.lineLimit)
-                }
-            }
+    private func sourceButton(_ label: String, url: URL) -> some View {
+        Button {
+            browserDestination = NewsSourceDestination(url: url)
+        } label: {
+            Label(label, systemImage: "arrow.up.right")
+                .font(.subheadline.weight(.medium))
+                .frame(minHeight: 44, alignment: .leading)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(EditorialTheme.accent)
     }
 }
 
-private struct SafariDestination: Identifiable {
+struct NewsSourceDestination: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
 }
 
-private struct InAppBrowserView: UIViewControllerRepresentable {
+struct NewsSourceBrowser: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> SFSafariViewController {

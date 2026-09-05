@@ -13,6 +13,7 @@ struct NewsListView: View {
                     ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
                     content
                 }
+                .accessibilityHidden(isImpactFilterPresented)
                 if isImpactFilterPresented {
                     impactFilterOverlay
                 }
@@ -41,12 +42,11 @@ struct NewsListView: View {
                 ContentUnavailableView(
                     model.selectedSection == .latestComments ? "No comments" : "No news",
                     systemImage: model.selectedSection == .latestComments ? "text.bubble" : "newspaper",
-                    description: Text("Pull to refresh or check the server details in Settings.")
+                    description: Text("Tap the update time to refresh, or check the server details in Settings.")
                 )
                 .foregroundStyle(EditorialTheme.ink)
-                .padding(.top, 40)
+                .padding(.top, EditorialSpacing.section)
             }
-            .refreshable { await model.refresh() }
         } else {
             List {
                 newspaperHeader
@@ -62,8 +62,11 @@ struct NewsListView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(EditorialTheme.paper)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                        .listRowSeparatorTint(EditorialTheme.rule)
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                        .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+                        .listRowBackground(EditorialTheme.surface)
                     }
                 } else {
                     ForEach(model.currentArticles) { article in
@@ -74,14 +77,17 @@ struct NewsListView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(EditorialTheme.paper)
+                        .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))
+                        .listRowSeparatorTint(EditorialTheme.rule)
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                        .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+                        .listRowBackground(EditorialTheme.surface)
                     }
                 }
                 if model.canLoadMore {
                     HStack {
                         Spacer()
-                        if model.isLoadingMore { ProgressView() } else { Text("Load more") }
+                        Text("Load more")
                         Spacer()
                     }
                     .font(.footnote)
@@ -92,32 +98,21 @@ struct NewsListView: View {
                 }
             }
             .listStyle(.plain)
+            .contentMargins(.top, 0, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .background(EditorialTheme.paper)
-            .refreshable { await model.refresh() }
         }
     }
 
     private var newspaperHeader: some View {
-        VStack(spacing: 10) {
-            VStack(spacing: 10) {
-                EditorialMasthead(section: "News")
-                HStack {
-                    Spacer()
-                    Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
-                        .font(EditorialTheme.smallCaps)
-                        .tracking(0.8)
-                        .foregroundStyle(EditorialTheme.accent)
-                }
-            }
-                .padding(.horizontal)
-                .padding(.top, 8)
-            HStack {
-                impactFilterButton
-                Spacer()
-                if model.isRefreshing { ProgressView() }
-            }
-            .padding(.horizontal)
+        VStack(spacing: 0) {
+            PageHeader(title: "News", subtitle: "", isRefreshing: model.isRefreshing,
+                       updatedAt: model.lastUpdatedAt, showsUpdateTime: true,
+                       refresh: { Task { await model.refresh() } },
+                       filterTitle: model.selectedSection == .latestComments ? nil : "\(impactFilterLabel) impact",
+                       filterAction: {
+                           withAnimation(.easeOut(duration: 0.16)) { isImpactFilterPresented = true }
+                       })
             NewsSectionPicker(model: model)
         }
         .background(EditorialTheme.paper)
@@ -127,30 +122,6 @@ struct NewsListView: View {
         model.selectedSection == .latestComments
             ? model.currentComments.isEmpty
             : model.currentArticles.isEmpty
-    }
-
-    @ViewBuilder
-    private var impactFilterButton: some View {
-        if model.selectedSection != .latestComments {
-            Button {
-                withAnimation(.easeOut(duration: 0.16)) {
-                    isImpactFilterPresented = true
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Text("\(impactFilterLabel) IMPACT")
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.bold))
-                }
-                .font(EditorialTheme.smallCaps)
-                .tracking(0.7)
-                .foregroundStyle(EditorialTheme.ink)
-                .padding(.vertical, 4)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Filter by impact")
-            .accessibilityValue(impactFilterLabel)
-        }
     }
 
     private var impactFilterOverlay: some View {
@@ -216,7 +187,7 @@ enum NewsImpactFilterOption: String, CaseIterable, Identifiable {
     }
 }
 
-private struct NewsImpactFilterDialog: View {
+struct NewsImpactFilterDialog: View {
     let selectedImpact: Impact?
     let onSelect: (NewsImpactFilterOption) -> Void
     let onDismiss: () -> Void
@@ -225,12 +196,8 @@ private struct NewsImpactFilterDialog: View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("NEWS DESK")
-                        .font(EditorialTheme.smallCaps)
-                        .tracking(1.1)
-                        .foregroundStyle(EditorialTheme.accent)
                     Text("Filter by impact")
-                        .font(EditorialTheme.headline(.title2))
+                        .font(.headline)
                 }
                 Spacer()
                 Button(action: onDismiss) {
@@ -246,25 +213,17 @@ private struct NewsImpactFilterDialog: View {
             .padding(.trailing, 8)
             .padding(.vertical, 12)
 
-            EditorialRule(weight: .double)
+            EditorialRule()
 
             ForEach(Array(NewsImpactFilterOption.allCases.enumerated()), id: \.element.id) { index, option in
                 Button {
                     onSelect(option)
                 } label: {
                     HStack(spacing: 12) {
-                        Rectangle()
-                            .fill(option.isSelected(filter: selectedImpact) ? EditorialTheme.accent : .clear)
-                            .frame(width: 3, height: 24)
-                        Text(option.rawValue)
-                            .font(EditorialTheme.metadata.weight(.bold))
-                            .tracking(0.7)
+                        Text(option.rawValue.capitalized)
+                            .font(.body)
                         Spacer()
                         if option.isSelected(filter: selectedImpact) {
-                            Text("SELECTED")
-                                .font(EditorialTheme.smallCaps)
-                                .tracking(0.6)
-                                .foregroundStyle(EditorialTheme.accent)
                             Image(systemName: "checkmark")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(EditorialTheme.accent)
@@ -284,16 +243,9 @@ private struct NewsImpactFilterDialog: View {
                 }
             }
         }
-        .background(EditorialTheme.paper)
-        .background {
-            Rectangle()
-                .fill(Color.black.opacity(0.35))
-                .offset(x: 6, y: 6)
-        }
-        .overlay {
-            Rectangle()
-                .stroke(EditorialTheme.ink, lineWidth: 2)
-        }
+        .padding(.bottom, 8)
+        .background(EditorialTheme.surface)
+        .foregroundStyle(EditorialTheme.ink)
         .accessibilityElement(children: .contain)
         .accessibilityAction(.escape, onDismiss)
     }

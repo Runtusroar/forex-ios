@@ -12,6 +12,7 @@ final class CalendarViewModel {
 
     var events: [CalendarEvent] = []
     var isRefreshing = false
+    var lastUpdatedAt: Date?
     var staleSince: Date?
     var errorMessage: String?
 
@@ -70,6 +71,7 @@ final class CalendarViewModel {
             let end = calendar.date(byAdding: .day, value: 8, to: start) ?? current
             let envelope = try await makeAPI().calendar(from: start, to: end)
             events = envelope.items.sorted(by: calendarEventPrecedes)
+            lastUpdatedAt = envelope.generatedAt
             staleSince = nil
             errorMessage = nil
             try await cache.save(envelope, as: .calendar)
@@ -85,6 +87,7 @@ final class CalendarViewModel {
             return
         }
         events = envelope.items.sorted(by: calendarEventPrecedes)
+        lastUpdatedAt = envelope.generatedAt
         staleSince = envelope.generatedAt
     }
 

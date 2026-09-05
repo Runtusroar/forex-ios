@@ -12,149 +12,127 @@ struct CalendarView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ZStack {
-                EditorialTheme.paper.ignoresSafeArea()
-                VStack(spacing: 0) {
-                    ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
-                    if model.events.isEmpty, !model.isRefreshing {
-                        ScrollView {
-                            VStack(spacing: 40) {
-                                calendarHeader
-                                ContentUnavailableView(
-                                    "No calendar events",
-                                    systemImage: "calendar",
-                                    description: Text("Add your server details in Settings, then pull to refresh.")
-                                )
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        .refreshable { await model.refresh() }
-                    } else {
-                        List {
-                            calendarHeader
-                                .listRowInsets(EdgeInsets(top: 18, leading: 20, bottom: 12, trailing: 20))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(EditorialTheme.paper)
-
-                            ForEach(sections, id: \.date) { section in
-                                Section {
-                                    ForEach(section.events) { event in
-                                        Button {
-                                            path.append(event.sourceID)
-                                        } label: {
-                                            CalendarEventRow(event: event)
-                                                .contentShape(Rectangle())
-                                        }
-                                        .buttonStyle(.plain)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(EditorialTheme.paper)
-                                    }
-                                } header: {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(EditorialDateFormatter.calendarDayLabel(section.date))
-                                            .font(EditorialTheme.smallCaps)
-                                            .tracking(1.2)
-                                            .foregroundStyle(EditorialTheme.accent)
-                                        EditorialRule(weight: .strong)
-                                    }
-                                    .padding(.top, 18)
-                                    .textCase(nil)
-                                }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .refreshable { await model.refresh() }
+            VStack(spacing: 0) {
+                ContentStatusBanner(message: model.errorMessage, staleSince: model.staleSince)
+                if model.events.isEmpty, !model.isRefreshing {
+                    ScrollView {
+                        calendarHeader
+                        ContentUnavailableView(
+                            "No calendar events", systemImage: "calendar",
+                            description: Text("Tap the update time to refresh, or check your connection in Settings.")
+                        )
+                        .padding(.top, EditorialSpacing.section)
                     }
+                } else {
+                    List {
+                        calendarHeader
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                        ForEach(sections, id: \.date) { section in
+                            SectionBand(
+                                title: EditorialDateFormatter.calendarDayLabel(section.date).capitalized,
+                                detail: "\(section.events.count) \(section.events.count == 1 ? "event" : "events")"
+                            )
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            ForEach(section.events) { event in
+                                Button { path.append(event.sourceID) } label: {
+                                    CalendarEventRow(event: event)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .listRowInsets(EdgeInsets(top: EditorialSpacing.row, leading: 20, bottom: EditorialSpacing.row, trailing: 20))
+                                .listRowSeparatorTint(EditorialTheme.rule)
+                                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                                .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+                            }
+                        }
+                        .listRowBackground(EditorialTheme.surface)
+                    }
+                    .listStyle(.plain)
+                    .contentMargins(.top, 0, for: .scrollContent)
+                    .scrollContentBackground(.hidden)
                 }
             }
-            .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
-            .navigationBarTitleDisplayMode(.inline)
+            .background(EditorialTheme.paper.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .toolbar {
-                if model.isRefreshing {
-                    ToolbarItem(placement: .topBarTrailing) { ProgressView() }
-                }
-            }
             .navigationDestination(for: String.self) { sourceID in
                 if let event = model.events.first(where: { $0.sourceID == sourceID }) {
                     CalendarDetailView(event: event, model: model)
                 } else {
-                    ContentUnavailableView(
-                        "Event unavailable", systemImage: "calendar.badge.exclamationmark")
+                    ContentUnavailableView("Event unavailable", systemImage: "calendar.badge.exclamationmark")
                 }
             }
         }
     }
 
     private var calendarHeader: some View {
-        VStack(spacing: 10) {
-            EditorialMasthead(section: "Calendar")
-            HStack {
-                Spacer()
-                Text("TIMEZONE · \(EditorialDateFormatter.utcPlusEightLabel)")
-                    .font(EditorialTheme.smallCaps)
-                    .tracking(0.8)
-                    .foregroundStyle(EditorialTheme.accent)
-            }
-        }
+        PageHeader(title: "Calendar", subtitle: "Economic calendar · UTC+8", isRefreshing: model.isRefreshing, updatedAt: model.lastUpdatedAt, showsUpdateTime: true, refresh: { Task { await model.refresh() } })
     }
 }
 
-private struct CalendarEventRow: View {
+struct CalendarEventRow: View {
     let event: CalendarEvent
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: EditorialSpacing.related) {
+            metadataLayout {
                 Text(EditorialDateFormatter.calendarTime(event))
-                    .font(EditorialTheme.metadata.monospacedDigit())
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(EditorialTheme.mutedInk)
                 Text(event.currency)
-                    .font(EditorialTheme.metadata.weight(.bold))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(EditorialTheme.ink)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 ImpactBadge(impact: event.impact)
-                Spacer()
             }
-            BilingualText(english: event.titleEN, chinese: event.titleZH, role: .sectionHeadline)
-            EditorialRule()
-            HStack(spacing: 0) {
-                ValueCell(label: "Actual", value: event.actual)
-                EditorialValueDivider()
+            HStack(alignment: .top, spacing: 12) {
+                ContentText(english: event.titleEN, font: .body.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(EditorialTheme.mutedInk)
+                    .padding(.top, 4)
+                    .accessibilityHidden(true)
+            }
+            valueLayout {
+                ValueCell(label: "Actual", value: event.actual, emphasized: true)
                 ValueCell(label: "Forecast", value: event.forecast)
-                EditorialValueDivider()
                 ValueCell(label: "Previous", value: event.previous)
             }
-            EditorialRule()
         }
-        .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
+    }
+
+    private var metadataLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
+    }
+
+    private var valueLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
     }
 }
 
 private struct ValueCell: View {
     let label: String
     let value: String?
+    var emphasized = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(EditorialTheme.smallCaps)
-                .textCase(.uppercase)
-                .foregroundStyle(EditorialTheme.mutedInk)
+        VStack(alignment: .leading, spacing: EditorialSpacing.inline) {
+            Text(label).font(.caption).foregroundStyle(EditorialTheme.mutedInk)
             Text(value?.isEmpty == false ? value! : "—")
-                .font(EditorialTheme.metadata.monospacedDigit().weight(.semibold))
-                .foregroundStyle(EditorialTheme.ink)
+                .font(.body.monospacedDigit().weight(emphasized ? .semibold : .regular))
+                .foregroundStyle(emphasized ? EditorialTheme.ink : EditorialTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(value?.isEmpty == false ? value! : "Not available")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct EditorialValueDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(EditorialTheme.rule)
-            .frame(width: 1)
-            .padding(.vertical, 1)
-            .padding(.horizontal, 10)
+        .accessibilityElement(children: .combine)
     }
 }

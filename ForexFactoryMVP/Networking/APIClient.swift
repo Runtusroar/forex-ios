@@ -194,10 +194,12 @@ struct APIRequestBuilder: Sendable {
 actor APIClient: ForexAPI {
     private let builder: APIRequestBuilder
     private let session: URLSession
+    private let imageCache: ImageDataCache
 
-    init(baseURL: URL, apiKey: String, session: URLSession = .shared) {
+    init(baseURL: URL, apiKey: String, session: URLSession = .shared, imageCache: ImageDataCache = .shared) {
         builder = APIRequestBuilder(baseURL: baseURL, apiKey: apiKey)
         self.session = session
+        self.imageCache = imageCache
     }
 
     func calendar(from start: Date, to end: Date) async throws -> CalendarEnvelope {
@@ -240,9 +242,15 @@ actor APIClient: ForexAPI {
     }
 
     func mediaData(path: String) async throws -> Data {
-        let (data, response) = try await session.data(for: builder.media(path: path))
-        try validate(response)
-        return data
+        var request = try builder.media(path: path)
+        // The explicit cache is scoped to the API key; do not reuse a generic HTTP-cache entry.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let imageRequest = request
+        return try await imageCache.data(key: ImageDataCache.requestKey(imageRequest)) { [self] in
+            let (data, response) = try await session.data(for: imageRequest)
+            try await validate(response)
+            return data
+        }
     }
 
     func topContracts(

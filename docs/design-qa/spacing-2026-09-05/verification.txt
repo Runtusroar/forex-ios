@@ -1,0 +1,7 @@
+READER_HEIGHTS initial=11680.0 reverse=[11680.0, 11680.0, 11680.0, 11680.0, 11680.0, 11680.0]
+READER_MEDIA_REQUESTS ["/media/8": 1, "/media/28": 1, "/media/32": 1, "/media/12": 1, "/media/16": 1, "/media/20": 1, "/media/24": 1, "/media/0": 1, "/media/4": 1]
+	 Executed 62 tests, with 0 failures (0 unexpected) in 28.075 (28.092) seconds
+	 Executed 62 tests, with 0 failures (0 unexpected) in 28.075 (28.093) seconds
+** TEST SUCCEEDED **
+Device: BUILD SUCCEEDED
+Installation: shop.zhenmei.ForexFactoryMVP installed on iPhone 15 Pro, 2026-09-05 17:10 Asia/Shanghai.

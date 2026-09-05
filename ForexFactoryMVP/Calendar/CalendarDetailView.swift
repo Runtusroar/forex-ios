@@ -7,12 +7,13 @@ struct CalendarDetailView: View {
     @State private var detail: CalendarDetail?
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ZStack {
             EditorialTheme.paper.ignoresSafeArea()
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 22) {
+                LazyVStack(alignment: .leading, spacing: EditorialSpacing.section) {
                     header
                     valueStrip
                     if let detail {
@@ -20,13 +21,6 @@ struct CalendarDetailView: View {
                         history(detail.history)
                         relatedStories(detail.relatedStories)
                         links(detail)
-                    }
-                    if isLoading {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                            Text("LOADING FOREX FACTORY DETAIL...")
-                                .font(EditorialTheme.smallCaps)
-                        }
                     }
                     if let errorMessage {
                         ContentUnavailableView {
@@ -39,11 +33,12 @@ struct CalendarDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
-                .padding(.bottom, 30)
+                .padding(.horizontal, 20)
+                .padding(.bottom, EditorialSpacing.section)
             }
         }
-        .navigationTitle("EVENT")
+        .navigationTitle("Event")
+        .toolbar(.visible, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(EditorialTheme.paper, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -54,42 +49,41 @@ struct CalendarDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            metadataLayout {
                 Text((displayDetail?.currency ?? event.currency).uppercased())
                     .font(EditorialTheme.smallCaps)
                     .tracking(0.8)
-                    .foregroundStyle(EditorialTheme.accent)
+                    .foregroundStyle(EditorialTheme.ink)
                 if let currencyName = displayDetail?.currencyName, !currencyName.isEmpty {
                     Text(currencyName.uppercased())
                         .font(EditorialTheme.smallCaps)
                         .foregroundStyle(EditorialTheme.mutedInk)
                 }
-                Spacer()
+                if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                 ImpactBadge(impact: displayDetail?.impact ?? event.impact)
             }
-            Text(displayDetail?.titleEN ?? event.titleEN)
-                .font(EditorialTheme.headline(.title, weight: .bold))
-                .foregroundStyle(EditorialTheme.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(EditorialDateFormatter.calendarTime(event))
+            ContentText(
+                english: displayDetail?.titleEN ?? event.titleEN,
+                font: .title2.weight(.semibold)
+            )
+            Text("\(EditorialDateFormatter.calendarDayLabel(event.eventAt).capitalized) · \(EditorialDateFormatter.calendarTime(event)) · UTC+8")
                 .font(EditorialTheme.metadata.monospacedDigit())
                 .foregroundStyle(EditorialTheme.mutedInk)
-            EditorialRule(weight: .strong)
+            LastUpdatedText(date: detail?.updatedAt ?? event.updatedAt)
         }
-        .padding(.top, 12)
+        .padding(.top, EditorialSpacing.content)
     }
 
     private var valueStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 0) {
+            valueLayout {
                 DetailValueCell(
                     label: "Actual",
                     value: displayDetail?.actual ?? event.actual,
-                    state: displayDetail?.actualState
+                    state: displayDetail?.actualState,
+                    emphasized: true
                 )
-                DetailValueDivider()
                 DetailValueCell(label: "Forecast", value: displayDetail?.forecast ?? event.forecast)
-                DetailValueDivider()
                 DetailValueCell(
                     label: "Previous",
                     value: displayDetail?.previous ?? event.previous,
@@ -97,17 +91,18 @@ struct CalendarDetailView: View {
                 )
             }
             if let revised = displayDetail?.previousRevisedFrom {
-                Text("REVISED FROM \(revised)")
+                Text("Revised from \(revised)")
                     .font(EditorialTheme.smallCaps)
                     .foregroundStyle(EditorialTheme.mutedInk)
             }
-            EditorialRule()
         }
+        .padding(16)
+        .background(EditorialTheme.subtleSurface)
     }
 
     private func specs(_ detail: CalendarDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("SPECS")
+            sectionHeader("About this release")
             infoRow("Source", detail.sourceName)
             infoRow("Measures", detail.measures)
             infoRow("Usual Effect", detail.usualEffect)
@@ -116,6 +111,7 @@ struct CalendarDetailView: View {
             infoRow("FF Notes", detail.ffNotes)
             infoRow("Why Traders Care", detail.whyTradersCare)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func history(_ rows: [CalendarHistoryEntry]) -> some View {
@@ -128,23 +124,22 @@ struct CalendarDetailView: View {
             } else {
                 ForEach(rows) { row in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(row.releaseDateText.uppercased())
-                            .font(EditorialTheme.smallCaps)
-                            .foregroundStyle(EditorialTheme.accent)
-                        HStack(spacing: 0) {
-                            DetailValueCell(label: "Actual", value: row.actual, state: row.actualState)
-                            DetailValueDivider()
+                        Text(row.releaseDateText)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(EditorialTheme.ink)
+                        valueLayout {
+                            DetailValueCell(label: "Actual", value: row.actual, state: row.actualState, emphasized: true)
                             DetailValueCell(label: "Forecast", value: row.forecast)
-                            DetailValueDivider()
                             DetailValueCell(label: "Previous", value: row.previous, state: row.previousState)
                         }
                         if let revised = row.previousRevisedFrom {
-                            Text("REVISED FROM \(revised)")
+                            Text("Revised from \(revised)")
                                 .font(EditorialTheme.smallCaps)
                                 .foregroundStyle(EditorialTheme.mutedInk)
                         }
                     }
-                    EditorialRule()
+                    .padding(16)
+                    .background(EditorialTheme.subtleSurface)
                 }
             }
         }
@@ -188,44 +183,50 @@ struct CalendarDetailView: View {
     private func links(_ detail: CalendarDetail) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if let ffURL = detail.ffURL {
-                Link("OPEN FULL EVENT ON FOREX FACTORY", destination: ffURL)
+                Link("View event on Forex Factory", destination: ffURL).frame(minHeight: 44, alignment: .leading)
             }
             if let sourceURL = detail.sourceURL {
-                Link("OPEN SOURCE", destination: sourceURL)
+                Link("View source", destination: sourceURL).frame(minHeight: 44, alignment: .leading)
             }
             if let latestReleaseURL = detail.latestReleaseURL {
-                Link("OPEN LATEST RELEASE", destination: latestReleaseURL)
+                Link("View latest release", destination: latestReleaseURL).frame(minHeight: 44, alignment: .leading)
             }
         }
-        .font(EditorialTheme.smallCaps)
-        .tracking(0.5)
+        .font(.subheadline.weight(.semibold))
         .foregroundStyle(EditorialTheme.accent)
-        .underline()
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            EditorialRule(weight: .double)
-            Text(title)
-                .font(EditorialTheme.smallCaps)
-                .tracking(1.2)
-                .foregroundStyle(EditorialTheme.accent)
-        }
+        Text(title.capitalized)
+            .font(.headline)
+            .foregroundStyle(EditorialTheme.ink)
     }
 
     @ViewBuilder
     private func infoRow(_ label: String, _ value: String?) -> some View {
         if let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             VStack(alignment: .leading, spacing: 3) {
-                Text(label.uppercased())
-                    .font(EditorialTheme.smallCaps)
+                Text(label)
+                    .font(.caption)
                     .foregroundStyle(EditorialTheme.mutedInk)
                 Text(value)
-                    .font(.system(.subheadline, design: .serif))
+                    .font(.subheadline)
                     .foregroundStyle(EditorialTheme.ink)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var valueLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+    }
+
+    private var metadataLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
     }
 
     private func load() async {
@@ -245,34 +246,32 @@ private struct DetailValueCell: View {
     let label: String
     let value: String?
     var state: CalendarValueState?
+    var emphasized = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased())
-                .font(EditorialTheme.smallCaps)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
                 .foregroundStyle(EditorialTheme.mutedInk)
-            Text(value?.isEmpty == false ? value! : "-")
-                .font(EditorialTheme.metadata.monospacedDigit().weight(.semibold))
+            Text(value?.isEmpty == false ? value! : "—")
+                .font(.body.monospacedDigit().weight(emphasized ? .semibold : .regular))
                 .foregroundStyle(valueColor)
+                .fixedSize(horizontal: false, vertical: true)
+            if let state, state != .unknown {
+                Text(state.rawValue.capitalized)
+                    .font(.caption)
+                    .foregroundStyle(EditorialTheme.mutedInk)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private var valueColor: Color {
         switch state {
-        case .better: Color(red: 0.08, green: 0.36, blue: 0.27)
-        case .worse: EditorialTheme.accent
+        case .better: EditorialTheme.positive
+        case .worse: EditorialTheme.negative
         case .unknown, .none: EditorialTheme.ink
         }
-    }
-}
-
-private struct DetailValueDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(EditorialTheme.rule)
-            .frame(width: 1)
-            .padding(.vertical, 1)
-            .padding(.horizontal, 10)
     }
 }

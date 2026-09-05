@@ -5,45 +5,15 @@ struct NewsSectionPicker: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .bottom, spacing: 28) {
+            HStack(spacing: EditorialSpacing.section) {
                 ForEach(model.sections) { section in
-                    Button {
+                    CategoryTab(title: section.name.en ?? section.id.rawValue, isSelected: model.selectedSection == section.id) {
                         Task { await model.select(section.id) }
-                    } label: {
-                        VStack(spacing: 6) {
-                            Text(section.name.en ?? section.id.rawValue)
-                                .font(.system(.subheadline, design: .default, weight: .semibold))
-                            if let chinese = section.name.zhHans, !chinese.isEmpty {
-                                Text(chinese)
-                                    .font(.caption2)
-                                    .foregroundStyle(EditorialTheme.mutedInk)
-                            }
-                            Rectangle()
-                                .fill(
-                                    model.selectedSection == section.id
-                                        ? EditorialTheme.accent
-                                        : Color.clear
-                                )
-                                .frame(height: 3)
-                        }
-                        .foregroundStyle(
-                            model.selectedSection == section.id
-                                ? EditorialTheme.accent
-                                : EditorialTheme.ink
-                        )
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .frame(minHeight: 44)
-                    .accessibilityValue(model.selectedSection == section.id ? "Selected" : "")
                 }
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
+            .padding(.horizontal, 20)
         }
         .background(EditorialTheme.paper)
-        .overlay(alignment: .bottom) {
-            EditorialRule()
-        }
     }
 }

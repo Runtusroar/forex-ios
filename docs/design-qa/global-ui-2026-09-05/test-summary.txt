@@ -1,0 +1,18 @@
+Final standard run — 2026-09-05
+Test Suite 'ForexFactoryMVPTests.xctest' passed at 2026-09-05 15:36:51.367.
+	 Executed 56 tests, with 0 failures (0 unexpected) in 0.287 (0.302) seconds
+Test Suite 'All tests' passed at 2026-09-05 15:36:51.367.
+	 Executed 56 tests, with 0 failures (0 unexpected) in 0.287 (0.302) seconds
+2026-09-05 15:36:51.651 xcodebuild[89359:3932250] [MT] IDETestOperationsObserverDebug: 2.403 elapsed -- Testing started completed.
+2026-09-05 15:36:51.651 xcodebuild[89359:3932250] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-05 15:36:51.651 xcodebuild[89359:3932250] [MT] IDETestOperationsObserverDebug: 2.403 sec, +2.403 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/forex-global-ui-final.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+
+Capture run: /private/tmp/forex-global-ui-captures-3.log
+1 test passed, 0 failures; 23 production-view PNG captures.

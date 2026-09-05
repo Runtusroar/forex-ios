@@ -48,11 +48,10 @@ struct NewsMediaView: View {
                     } else if failed {
                         unavailableView
                     } else {
-                        ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+                        EditorialTheme.subtleSurface.frame(height: 120)
                     }
                 case .processing:
                     VStack(spacing: 8) {
-                        ProgressView()
                         Text("MEDIA PROCESSING")
                             .font(EditorialTheme.smallCaps)
                             .foregroundStyle(EditorialTheme.mutedInk)

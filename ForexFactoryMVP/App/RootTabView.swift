@@ -7,7 +7,16 @@ struct RootTabView: View {
     let contractsModel: ContractsViewModel
 
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selection: RootTab = .news
+    @State private var selection: RootTab
+
+    init(settings: AppSettings, calendarModel: CalendarViewModel, newsModel: NewsViewModel,
+         contractsModel: ContractsViewModel, initialTab: RootTab = .news) {
+        self.settings = settings
+        self.calendarModel = calendarModel
+        self.newsModel = newsModel
+        self.contractsModel = contractsModel
+        _selection = State(initialValue: initialTab)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +44,7 @@ struct RootTabView: View {
 
     private var editorialTabBar: some View {
         VStack(spacing: 0) {
-            EditorialRule(weight: .strong)
+            EditorialRule()
             HStack(spacing: 0) {
                 ForEach(RootTab.allCases) { tab in
                     Button {
@@ -43,12 +52,11 @@ struct RootTabView: View {
                     } label: {
                         VStack(spacing: 4) {
                             Image(systemName: tab.systemImage)
-                                .font(.system(size: 18, weight: .semibold))
-                            Text(tab.title.uppercased())
-                                .font(EditorialTheme.smallCaps)
-                                .tracking(0.6)
+                                .font(.system(size: 20, weight: .medium))
+                            Text(tab.title)
+                                .font(.caption2.weight(selection == tab ? .semibold : .medium))
                         }
-                        .foregroundStyle(selection == tab ? EditorialTheme.accent : EditorialTheme.ink)
+                        .foregroundStyle(selection == tab ? EditorialTheme.accent : EditorialTheme.mutedInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                         .contentShape(Rectangle())
@@ -59,7 +67,8 @@ struct RootTabView: View {
                 }
             }
         }
-        .background(EditorialTheme.paper)
+        .background(EditorialTheme.surface.ignoresSafeArea(edges: .bottom))
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private func update(for phase: ScenePhase) {

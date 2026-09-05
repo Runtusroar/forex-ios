@@ -1,20 +1,23 @@
 # Forex Factory MVP for iPhone
 
 A native personal iPhone app for the independent Forex Factory MVP backend. It presents the
-economic calendar and news with English as the primary text and optional Simplified Chinese below.
+economic calendar, news and futures contracts in English.
+
+Latest interface review: [compact headings and image caching](docs/design-qa/image-cache-2026-09-05/README.md).
 
 ## MVP scope
 
 - iOS 17+, Swift 6, and SwiftUI
-- Calendar, News, and Settings tabs
+- Calendar, News, Contracts, and Settings tabs
 - all eight Forex Factory news feeds: Latest, Hot, Fundamental, Technical, Industry,
   Entertainment, Educational, and Latest Comments
-- English-first cards and story segments with optional Simplified Chinese directly underneath
+- English cards, article segments and visually separated discussion
 - Forex Factory excerpts with their original terminal ellipsis and inline `(full story)` link
 - Forex Factory-style social post clamping with external `Show More` actions
 - impact filtering, opaque-cursor pagination, article comments, and authenticated cached media
-- foreground refresh approximately every 30 seconds
-- pull-to-refresh
+- quiet foreground refresh: Calendar/news every 30 seconds; Contracts every 5 seconds
+- second-precision UTC+8 feed update timestamps; tap the update time to refresh manually
+- shared bounded image memory/disk cache with coalesced downloads
 - last-successful JSON cache
 - backend URL in UserDefaults and API key in Keychain
 - no account system, pairing, or App Store distribution
